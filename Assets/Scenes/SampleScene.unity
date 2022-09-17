@@ -249,6 +249,25 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   leaders: []
+  buildingPrefab: {fileID: 0}
+  leaderPrefab: {fileID: 0}
+  unitPrefabs:
+  - {fileID: 8773089243587545892, guid: 0d4c7325b7ef0e644b5558a1943dd69c, type: 3}
+  - {fileID: 3982619425858438332, guid: e2c84fdde438a554cbcc223b0e18846d, type: 3}
+  - {fileID: 5235087231900580115, guid: 64650624f1d13a9479ac667e352a07d0, type: 3}
+  playerFactionMaterials:
+  - {fileID: 10302, guid: 0000000000000000f000000000000000, type: 0}
+  - {fileID: 2100000, guid: 49a3799e31595ea478b5dd6fa163fcbd, type: 2}
+  - {fileID: 2100000, guid: e0dd7b8c357813f4ba3ae9b60783a6cd, type: 2}
+  startUnitType:
+  - Dragon
+  - Elf
+  - Orc
+  startUnitCount: 0a0000000a0000000a000000
+  startPosition:
+  - {x: 0, y: 0}
+  - {x: 80, y: 80}
+  - {x: -80, y: -80}
 --- !u!4 &653003846
 Transform:
   m_ObjectHideFlags: 0
