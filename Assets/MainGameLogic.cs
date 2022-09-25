@@ -32,11 +32,14 @@ public class MainGameLogic : MonoBehaviour
     public InputAction primary;
     public InputAction mousePos;
     public InputAction mouseMove;
+    public InputAction cycleUnitGroupLeft;
+    public InputAction cycleUnitGroupRight;
     public Camera mainCamera;
     public Transform targetCursor;
     public Vector3 cameraOffset = new Vector3(0,50,-50);
     public float targetRange=10f;
     private Vector2 lookDirection=Vector2.up;
+    private Leader playerLeader;
 
 
 
@@ -52,6 +55,9 @@ public class MainGameLogic : MonoBehaviour
         primary.Enable();
         mousePos.Enable();
         mouseMove.Enable();
+
+        cycleUnitGroupLeft.Enable();
+        cycleUnitGroupRight.Enable();
             
         instance = this;
         unitPrefabsByType.Clear();
@@ -60,6 +66,10 @@ public class MainGameLogic : MonoBehaviour
             unitPrefabsByType.Add(prefab.name, prefab);
         }
         CreateWorld();
+
+        //hacky actions should be per human player 
+        cycleUnitGroupLeft.performed += ctx=>playerLeader.GetUnitGroups().PrevStartIndex();
+        cycleUnitGroupRight.performed += ctx => playerLeader.GetUnitGroups().NextStartIndex();
     }
 
     // Update is called once per frame
@@ -108,6 +118,7 @@ public class MainGameLogic : MonoBehaviour
                 if ((leader.transform.position - b.transform.position).sqrMagnitude < targetRange * targetRange)
                     nearbyThings.Add(b.transform);
             }
+
             //Debug.Log(nearbyThings.Count);
             float maxAlignment = -1f;
             Transform target=null;
@@ -126,8 +137,38 @@ public class MainGameLogic : MonoBehaviour
             {
                 targetCursor.transform.position = new Vector3(target.position.x, 5f, target.position.z);
             }
-            //(optionally prototype a lock on mode where you can just cycle nearby targest and not have the totally free look at all)
+            //TODO consider prototyping lockon mode
+
+
+
             //update units following leader
+            UnitGroup prev = null;
+            foreach (var group in leader.GetUnitGroups().list)
+            {
+                for(int i=0; i<group.units.Count; ++i)
+                {
+
+                }
+
+                Vector2 followPos;
+                if (prev == null)
+                    followPos = ToVec2(leader.transform.position);
+                else
+                    followPos = prev.pos;
+                Vector2 towardTarget = followPos - group.pos;
+                if(towardTarget.magnitude > group.followDistance)
+                {
+                    group.pos = followPos - towardTarget;
+                    group.orientation = towardTarget.normalized;
+                }
+                Debug.Log("Group unit count = "+group.units.Count);
+                foreach(Unit u in group.units)
+                {
+                    //u.transform.position = ToVec3(group.pos);
+                }
+            }
+
+
             //issue orders to target
         }
         foreach (var building in bulidings)
@@ -162,6 +203,8 @@ public class MainGameLogic : MonoBehaviour
             if(leader.TryGetComponent(out lc))
             {
                 leaders.Add(lc);
+                if (faction.isPlayerFaction)
+                    playerLeader = lc;
             }
             for(int i=0; i<faction.startUnitCounts[0]; ++i)
             {
@@ -200,6 +243,16 @@ public class MainGameLogic : MonoBehaviour
             unitComponent.unitType = unitType;
         }
         instance.bulidings.Add(unitComponent);
+    }
+
+    public static Vector2 ToVec2(Vector3 vec3)
+    {
+        return new Vector2(vec3.x, vec3.z);
+    }
+
+    public static Vector3 ToVec3(Vector2 vec2)
+    {
+        return new Vector3(vec2.x, 0f, vec2.y);
     }
 }
 

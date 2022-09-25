@@ -31,4 +31,10 @@ public class Unit : MonoBehaviour
 public class UnitGroup
 {
     public List<Unit> units = new List<Unit>();
+    //how many rows
+    public int rowWidth=4;
+    public float spacing=2f;
+    public float followDistance=5f;
+    public Vector2 pos=Vector2.zero;
+    public Vector2 orientation = Vector2.zero;
 }
