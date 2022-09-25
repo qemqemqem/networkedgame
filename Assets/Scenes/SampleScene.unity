@@ -479,7 +479,7 @@ MonoBehaviour:
       m_Id: 8a679368-1fbc-4237-985c-bdf8526aba9d
       m_Path: <Gamepad>/leftStick
       m_Interactions: 
-      m_Processors: 
+      m_Processors: AxisDeadzone
       m_Groups: 
       m_Action: Move
       m_Flags: 0
@@ -535,7 +535,7 @@ MonoBehaviour:
       m_Id: e23ee325-bc38-4882-b9e6-45f0df0cf883
       m_Path: <Gamepad>/rightStick
       m_Interactions: 
-      m_Processors: 
+      m_Processors: AxisDeadzone
       m_Groups: 
       m_Action: Look
       m_Flags: 0
