@@ -45,6 +45,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   unitRenderer: {fileID: 2373673106604023605}
+  unitType: Elf
 --- !u!1 &7334071070095379431
 GameObject:
   m_ObjectHideFlags: 0

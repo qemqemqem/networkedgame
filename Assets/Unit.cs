@@ -4,7 +4,9 @@ using UnityEngine;
 
 public class Unit : MonoBehaviour
 {
+    public Faction faction;
     public Renderer unitRenderer;
+    public string unitType;
 
     // Start is called before the first frame update
     void Start()
@@ -18,8 +20,15 @@ public class Unit : MonoBehaviour
         
     }
 
-    public void OnSpawn(Material material)
+    public void OnSpawn(Faction faction)
     {
-        unitRenderer.material = material;
+        this.faction = faction;
+        unitRenderer.material = faction.unitMaterial;
     }
+}
+
+
+public class UnitGroup
+{
+    public List<Unit> units = new List<Unit>();
 }

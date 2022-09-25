@@ -1,14 +1,20 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System;
+using UnityEngine.InputSystem;
 
 public class MainGameLogic : MonoBehaviour
 {
     private static readonly int NUM_BUILDINGS_PLAYER_FACTIONS = 1;
     private static readonly int NUM_BUILDINGS_NEUTRAL_FACTION = 50;
 
-    public List<GameObject> leaders = new List<GameObject>();
-    public ISet<GameObject> units = new HashSet<GameObject>();
+    public List<Leader> leaders = new List<Leader>();
+    public ISet<Unit> units = new HashSet<Unit>();
+    public ISet<BulidingComponent> bulidings = new HashSet<BulidingComponent>();
+
+    //TODO actually maintain this and update things as they move around (should be easy), use it for distance queries
+    //private Dictionary<Vector2Int, GameObject> courseCollision = new Dictionary<Vector2Int, GameObject>();
 
     public Transform buildingPrefab;
 
@@ -18,10 +24,20 @@ public class MainGameLogic : MonoBehaviour
     private Dictionary<string, Transform> unitPrefabsByType = new Dictionary<string, Transform>();
 
 
-    public List<Material> playerFactionMaterials = new List<Material>();
-    public List<string> startUnitType = new List<string>();
-    public List<int> startUnitCount = new List<int>();
-    public List<Vector2> startPosition = new List<Vector2>();
+    public List<Faction> factions = new List<Faction>();
+
+    //controls stuff  should be per human leader/faction
+    public InputAction move;
+    public InputAction look;
+    public InputAction primary;
+    public InputAction mousePos;
+    public InputAction mouseMove;
+    public Camera mainCamera;
+    public Transform targetCursor;
+    public Vector3 cameraOffset = new Vector3(0,50,-50);
+    public float targetRange=10f;
+    private Vector2 lookDirection=Vector2.up;
+
 
 
 
@@ -30,6 +46,13 @@ public class MainGameLogic : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        //controlls stuff shoudl be per human leader/faction
+        move.Enable();
+        look.Enable();
+        primary.Enable();
+        mousePos.Enable();
+        mouseMove.Enable();
+            
         instance = this;
         unitPrefabsByType.Clear();
         foreach(Transform prefab in unitPrefabs)
@@ -40,68 +63,162 @@ public class MainGameLogic : MonoBehaviour
     }
 
     // Update is called once per frame
-    void Update()
+    void FixedUpdate()
     {
-        //50
-        //50 red - 5 blue
-        //45 red
-        //0 red -
-        //5 blue
+
+        //controls stuff should be per human leader/faction
+        Vector2 moveVector = move.ReadValue<Vector2>();
+
+        float centerX = Screen.width / 2;
+        float centerY = Screen.height / 2;
+        if (mouseMove.ReadValue<Vector2>().sqrMagnitude > 1E-4)
+        {
+            Vector2 mpos = mousePos.ReadValue<Vector2>();
+            lookDirection = new Vector2(mpos.x - centerX, mpos.y - centerY).normalized;
+        }
+        Vector2 gamepadLook = look.ReadValue<Vector2>();
+        if (gamepadLook.sqrMagnitude > 1E-4)
+        {
+            lookDirection = gamepadLook;
+        }
+        
+        
+        
+
+        foreach (var leader in leaders)
+        {
+            Unit uc;
+            if (!leader.TryGetComponent(out uc))
+                continue;
+            if (!uc.faction.isPlayerFaction)
+                continue;
+            leader.transform.position += 20f * new Vector3(moveVector.x, 0, moveVector.y) * Time.fixedDeltaTime;
+
+
+            //ANDREW you will appreciate this brute force methodology here....
+            List<Transform> nearbyThings = new List<Transform>();
+            foreach (var unit in instance.units)
+            {
+                if (unit.faction!=uc.faction&&(leader.transform.position - unit.transform.position).sqrMagnitude < targetRange * targetRange)
+                    nearbyThings.Add(unit.transform);
+
+            }
+            foreach(var b in instance.bulidings)
+            {
+                if ((leader.transform.position - b.transform.position).sqrMagnitude < targetRange * targetRange)
+                    nearbyThings.Add(b.transform);
+            }
+            //Debug.Log(nearbyThings.Count);
+            float maxAlignment = -1f;
+            Transform target=null;
+            foreach (var t in nearbyThings) {
+                Vector3 screenPos = mainCamera.WorldToScreenPoint(t.position)-new Vector3(centerX, centerY, 0f);
+                float alignment = Vector2.Dot(lookDirection, new Vector2(screenPos.x, screenPos.y).normalized);
+                if(alignment > maxAlignment)
+                {
+                    //Debug.Log(screenPos);
+                    maxAlignment = alignment;
+                    target = t;
+                }
+            }
+
+            if (target != null)
+            {
+                targetCursor.transform.position = new Vector3(target.position.x, 5f, target.position.z);
+            }
+            //(optionally prototype a lock on mode where you can just cycle nearby targest and not have the totally free look at all)
+            //update units following leader
+            //issue orders to target
+        }
+        foreach (var building in bulidings)
+        {
+            building.timeSinceSpawn += Time.deltaTime;
+            if (building.timeSinceSpawn > 1f/building.spawnRate)
+            {
+                building.timeSinceSpawn = 0f;
+                building.UpdateCount(building.garrisonCount+1);
+            }
+        }
     }
 
 
     private void CreateWorld()
     {
-        List<Faction> factions = new List<Faction>();
-        for(int i=0; i<playerFactionMaterials.Count; ++i)
-        {
-            factions.Add(new Faction(playerFactionMaterials[i], new string[] {startUnitType[i]}, new int[] {startUnitCount[i]}, startPosition[i]));
-        }
-
-
         foreach(Faction faction in factions)
         {
-            int numBuildings = faction.Equals(Color.white) ? NUM_BUILDINGS_NEUTRAL_FACTION : NUM_BUILDINGS_PLAYER_FACTIONS;
-            float startOffset = faction.Equals(Color.white) ? 100f : 20f;
+            int numBuildings = faction.isNeutral ? NUM_BUILDINGS_NEUTRAL_FACTION : NUM_BUILDINGS_PLAYER_FACTIONS;
+            float startOffset = faction.isNeutral ? 100f : 20f;
+            string unitType = faction.startUnitTypes[0];
 
             for (int i = 0; i < numBuildings; ++i)
             {
-                SpawnUnit(buildingPrefab, faction.startPosition+UnityEngine.Random.insideUnitCircle * startOffset, faction.unitMaterial);
+                SpawnBuliding(buildingPrefab, faction.startPosition+UnityEngine.Random.insideUnitCircle * startOffset, faction, unitType);
             }
+            if (faction.isNeutral)
+                continue;
+
+            GameObject leader = SpawnUnit(leaderPrefab, faction.startPosition, faction);
+            Leader lc;
+            if(leader.TryGetComponent(out lc))
+            {
+                leaders.Add(lc);
+            }
+            for(int i=0; i<faction.startUnitCounts[0]; ++i)
+            {
+                GameObject unit = SpawnUnit(unitPrefabsByType[unitType], faction.startPosition + UnityEngine.Random.insideUnitCircle * 20f, faction);
+                Unit uc;
+                if(unit.TryGetComponent(out uc))
+                    lc.AddUnit(uc);
+            }
+            if (faction.isPlayerFaction)
+            {
+                mainCamera.transform.SetParent(leader.transform);
+                mainCamera.transform.localPosition = cameraOffset;
+                mainCamera.transform.localRotation = Quaternion.LookRotation(-cameraOffset, Vector3.up);
+            }
+
         }
         
     }
 
-    public static void SpawnUnit(Transform prefab, Vector2 mapPosition, Material factionMaterial)
+    public static GameObject SpawnUnit(Transform prefab, Vector2 mapPosition, Faction faction)
     {
         GameObject newUnit = GameObject.Instantiate(prefab.gameObject, new Vector3(mapPosition.x, 0, mapPosition.y), Quaternion.identity);
         Unit unitComponent;
         if (newUnit.TryGetComponent<Unit>(out unitComponent))
-            unitComponent.OnSpawn(factionMaterial);
-        instance.units.Add(newUnit);
+            unitComponent.OnSpawn(faction);
+        instance.units.Add(unitComponent);
+        return newUnit;
     }
 
-    public static void SpawnBuilding(Transform prefab, Vector2 mapPosition, Material factionMaterial)
+    public static void SpawnBuliding(Transform prefab, Vector2 mapPosition, Faction faction, string unitType)
     {
         GameObject newUnit = GameObject.Instantiate(prefab.gameObject, new Vector3(mapPosition.x, 0, mapPosition.y), Quaternion.identity);
-        Unit unitComponent;
-        if (newUnit.TryGetComponent<Unit>(out unitComponent))
-            unitComponent.OnSpawn(factionMaterial);
-        instance.units.Add(newUnit);
+        BulidingComponent unitComponent;
+        if (newUnit.TryGetComponent<BulidingComponent>(out unitComponent)) {
+            unitComponent.OnSpawn(faction);
+            unitComponent.unitType = unitType;
+        }
+        instance.bulidings.Add(unitComponent);
     }
 }
 
+[Serializable]
 public class Faction
 {
-    public readonly Material unitMaterial;
-    public readonly string[] startUnitTypes;
-    public readonly int[] startUnitCounts;
-    public readonly Vector2 startPosition;
-    public Faction(Material unitMaterial, string[] startUnitTypes, int[] startUnitCounts, Vector2 startPosition)
+    public Material unitMaterial;
+    public string[] startUnitTypes;
+    public int[] startUnitCounts;
+    public Vector2 startPosition;
+    public bool isPlayerFaction;
+    public bool isNeutral = false;
+    public Color factionColor;
+    public Faction(Material unitMaterial, string[] startUnitTypes, int[] startUnitCounts, Vector2 startPosition, bool isPlayerFaction)
     {
         this.unitMaterial = unitMaterial;
         this.startUnitTypes = startUnitTypes;
         this.startUnitCounts = startUnitCounts;
         this.startPosition = startPosition;
+        this.isPlayerFaction = isPlayerFaction;
     }
 }

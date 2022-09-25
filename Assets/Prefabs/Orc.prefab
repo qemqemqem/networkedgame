@@ -141,3 +141,4 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   unitRenderer: {fileID: 4551959085948782281}
+  unitType: Orc

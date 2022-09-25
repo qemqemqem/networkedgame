@@ -45,6 +45,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   unitRenderer: {fileID: 557662668823505590}
+  unitType: Dragon
 --- !u!1 &7612524373457549230
 GameObject:
   m_ObjectHideFlags: 0
