@@ -68,14 +68,15 @@ public class MainGameLogic : MonoBehaviour
         CreateWorld();
 
         //hacky actions should be per human player 
-        cycleUnitGroupLeft.performed += ctx=>playerLeader.GetUnitGroups().PrevStartIndex();
-        cycleUnitGroupRight.performed += ctx => playerLeader.GetUnitGroups().NextStartIndex();
+        cycleUnitGroupLeft.performed += ctx=>Debug.Log("Previous unit group");
+        cycleUnitGroupRight.performed += ctx => Debug.Log("Next unit group");
     }
 
     // Update is called once per frame
     void FixedUpdate()
     {
-
+        if (instance == null)
+            return;
         //controls stuff should be per human leader/faction
         Vector2 moveVector = move.ReadValue<Vector2>();
 
@@ -138,33 +139,42 @@ public class MainGameLogic : MonoBehaviour
                 targetCursor.transform.position = new Vector3(target.position.x, 5f, target.position.z);
             }
             //TODO consider prototyping lockon mode
-
-
-
+            Debug.Log(leader.GetUnitGroups().Count);
             //update units following leader
-            UnitGroup prev = null;
-            foreach (var group in leader.GetUnitGroups().list)
+            Vector2 followPos = ToVec2(leader.transform.position);
+            foreach (var group in leader.GetUnitGroups())
             {
-                for(int i=0; i<group.units.Count; ++i)
+                Vector2 currentOffset = followPos - group.pos;
+                if (currentOffset.magnitude > group.followDistance)
                 {
-
+                    group.pos = followPos - currentOffset.normalized*group.followDistance;
+                    group.orientation = currentOffset.normalized;
                 }
 
-                Vector2 followPos;
-                if (prev == null)
-                    followPos = ToVec2(leader.transform.position);
-                else
-                    followPos = prev.pos;
-                Vector2 towardTarget = followPos - group.pos;
-                if(towardTarget.magnitude > group.followDistance)
+                followPos = group.pos;
+                for(int i=0; i<group.rowPositions.Count; ++i)
                 {
-                    group.pos = followPos - towardTarget;
-                    group.orientation = towardTarget.normalized;
+                    Vector2 rowPos = group.rowPositions[i];
+                    currentOffset = followPos - rowPos;
+                    if (currentOffset.magnitude > group.followDistance)
+                    {
+                        rowPos = followPos - currentOffset.normalized * group.followDistance;
+                        group.rowPositions[i] = rowPos;
+                        group.rowOrientations[i] = currentOffset.normalized;
+                    }
+                    followPos = rowPos;
                 }
-                Debug.Log("Group unit count = "+group.units.Count);
-                foreach(Unit u in group.units)
+
+                float startXOffset = -(group.rowWidth * group.spacing) / 2f;
+                for (int i=0; i<group.units.Count; ++i)
                 {
-                    //u.transform.position = ToVec3(group.pos);
+                    int row = i / group.rowWidth;
+                    int col = i % group.rowWidth;
+                    Vector2 rowPos = group.rowPositions[row];
+                    Vector2 rowOrientation = group.rowOrientations[row];
+                    Vector2 unitPos = Vector2.Perpendicular(rowOrientation) * startXOffset + (Vector2.Perpendicular(rowOrientation)*group.spacing*col);             
+                    Unit u = group.units[i];
+                    u.transform.position =  ToVec3(unitPos+rowPos);
                 }
             }
 

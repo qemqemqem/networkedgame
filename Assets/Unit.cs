@@ -33,8 +33,27 @@ public class UnitGroup
     public List<Unit> units = new List<Unit>();
     //how many rows
     public int rowWidth=4;
-    public float spacing=2f;
+    public float spacing=4f;
     public float followDistance=5f;
     public Vector2 pos=Vector2.zero;
     public Vector2 orientation = Vector2.zero;
+    public List<Vector2> rowPositions = new List<Vector2>();
+    public List<Vector2> rowOrientations = new List<Vector2>();
+
+    public UnitGroup()
+    {
+        rowPositions.Add(Vector2.zero);
+        rowOrientations.Add(Vector2.zero);
+    }
+
+    public void Add(Unit unit)
+    {
+        if ((units.Count + 1) / rowWidth > units.Count / rowWidth)
+        {
+            rowPositions.Add(Vector2.zero);
+            rowOrientations.Add(Vector2.zero);
+        }
+        this.units.Add(unit);
+        
+    }
 }

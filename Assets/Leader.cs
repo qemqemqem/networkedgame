@@ -6,7 +6,7 @@ public class Leader : MonoBehaviour
 {
     public bool isPc=false;
     private Dictionary<string, UnitGroup> units = new Dictionary<string, UnitGroup>();
-    private CyclicList<UnitGroup> unitGroups = new CyclicList<UnitGroup>(new List<UnitGroup>(), 0);
+    private List<UnitGroup> unitGroups = new List<UnitGroup>();
 
     // Start is called before the first frame update
     void Start()
@@ -26,10 +26,9 @@ public class Leader : MonoBehaviour
         if (!units.TryGetValue(unit.unitType, out unitGroup)) {
             unitGroup = new UnitGroup();
             units.Add(unit.unitType, unitGroup);
-            unitGroups.list.Add(unitGroup);
+            unitGroups.Add(unitGroup);
         }
-        unitGroup.units.Add(unit);
-        Debug.Log(unitGroup.units.Count);
+        unitGroup.Add(unit);
     }
 
     public UnitGroup GetUnitGroup(string unitType)
@@ -40,13 +39,17 @@ public class Leader : MonoBehaviour
         return null;
     }
 
-    public CyclicList<UnitGroup> GetUnitGroups()
+    public List<UnitGroup> GetUnitGroups()
     {
         return unitGroups;
     }
 }
 
 
+
+
+
+//This is buggy
 public class CyclicList<T> : IEnumerable<T>
 {
     public readonly List<T> list;
@@ -97,13 +100,13 @@ public class CyclicEnumerator<T> : IEnumerator<T>
     private int currentIndex = 0;
     private bool started=false;
     
-    public T Current => currentIndex < 0 ? default(T) : list[currentIndex];
+    public T Current => currentIndex==-1?default(T):list[currentIndex];
 
     public CyclicEnumerator(List<T> list, int startIndex)
     {
         this.list = list;
         this.startIndex = startIndex;
-        this.currentIndex = startIndex-1;
+        this.currentIndex = startIndex;
     }
 
     object IEnumerator.Current => currentIndex<0?default(T):list[currentIndex];
@@ -116,7 +119,7 @@ public class CyclicEnumerator<T> : IEnumerator<T>
     {
         SetIndex(currentIndex+1);
         if (started)
-            return startIndex != NormalizeIndex(currentIndex + 1);
+            return startIndex != currentIndex;
         started = true;
         return true;
     }
@@ -125,7 +128,7 @@ public class CyclicEnumerator<T> : IEnumerator<T>
     {
         SetIndex(currentIndex - 1);
         if (started)
-            return startIndex!=NormalizeIndex(currentIndex-1);
+            return startIndex!=currentIndex;
         started = true;
         return true;
     }
@@ -137,6 +140,10 @@ public class CyclicEnumerator<T> : IEnumerator<T>
 
     private int NormalizeIndex(int index)
     {
+        if (list.Count==0)
+            return -1;
+        if (index >= 0 && index < list.Count)
+            return index;
         int normalized = index % list.Count;
         if (normalized < 0)
             normalized += list.Count;
