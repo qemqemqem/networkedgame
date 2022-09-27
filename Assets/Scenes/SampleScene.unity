@@ -563,6 +563,30 @@ MonoBehaviour:
       m_Groups: 
       m_Action: Primary
       m_Flags: 0
+  foolow:
+    m_Name: Foolow
+    m_Type: 0
+    m_ExpectedControlType: 
+    m_Id: 77d89317-793f-407c-a37e-80256490bcab
+    m_Processors: 
+    m_Interactions: 
+    m_SingletonActionBindings:
+    - m_Name: 
+      m_Id: e8011c00-6584-40d8-8243-72c1c8859d13
+      m_Path: <Gamepad>/buttonSouth
+      m_Interactions: Tap
+      m_Processors: 
+      m_Groups: 
+      m_Action: Foolow
+      m_Flags: 0
+    - m_Name: 
+      m_Id: 246235c6-d0e8-4b31-9f1d-55bc9d09ca9a
+      m_Path: <Mouse>/rightButton
+      m_Interactions: 
+      m_Processors: 
+      m_Groups: 
+      m_Action: Foolow
+      m_Flags: 0
   mousePos:
     m_Name: Mouse Pos
     m_Type: 0

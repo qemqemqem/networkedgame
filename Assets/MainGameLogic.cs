@@ -30,6 +30,7 @@ public class MainGameLogic : MonoBehaviour
     public InputAction move;
     public InputAction look;
     public InputAction primary;
+    public InputAction foolow;
     public InputAction mousePos;
     public InputAction mouseMove;
     public InputAction cycleUnitGroupLeft;
@@ -40,6 +41,7 @@ public class MainGameLogic : MonoBehaviour
     public float targetRange=10f;
     private Vector2 lookDirection=Vector2.up;
     private Leader playerLeader;
+    private Transform target = null;
 
 
 
@@ -56,6 +58,8 @@ public class MainGameLogic : MonoBehaviour
         mousePos.Enable();
         mouseMove.Enable();
 
+        foolow.Enable();
+
         cycleUnitGroupLeft.Enable();
         cycleUnitGroupRight.Enable();
             
@@ -70,6 +74,24 @@ public class MainGameLogic : MonoBehaviour
         //hacky actions should be per human player 
         cycleUnitGroupLeft.performed += ctx=>Debug.Log("Previous unit group");
         cycleUnitGroupRight.performed += ctx => Debug.Log("Next unit group");
+        foolow.performed += ctx => {
+            if (target == null||playerLeader==null)
+                return;
+            BulidingComponent bc;
+            Unit playerUnit;
+            if(target.TryGetComponent(out bc)&&playerLeader.TryGetComponent(out playerUnit))
+            {
+                for (int i=0; i<bc.garrisonCount; ++i)
+                {
+                    GameObject unit = SpawnUnit(unitPrefabsByType[bc.unitType], target.transform.position, playerUnit.faction);
+                    Unit uc;
+                    if (unit.TryGetComponent(out uc))
+                        playerLeader.AddUnit(uc);
+                }
+                bc.UpdateCount(0);
+            }
+        };
+
     }
 
     // Update is called once per frame
@@ -88,7 +110,7 @@ public class MainGameLogic : MonoBehaviour
             lookDirection = new Vector2(mpos.x - centerX, mpos.y - centerY).normalized;
         }
         Vector2 gamepadLook = look.ReadValue<Vector2>();
-        if (gamepadLook.sqrMagnitude > 1E-4)
+        if (gamepadLook.sqrMagnitude > .25f)
         {
             lookDirection = gamepadLook;
         }
@@ -122,7 +144,7 @@ public class MainGameLogic : MonoBehaviour
 
             //Debug.Log(nearbyThings.Count);
             float maxAlignment = -1f;
-            Transform target=null;
+            
             foreach (var t in nearbyThings) {
                 Vector3 screenPos = mainCamera.WorldToScreenPoint(t.position)-new Vector3(centerX, centerY, 0f);
                 float alignment = Vector2.Dot(lookDirection, new Vector2(screenPos.x, screenPos.y).normalized);
@@ -139,8 +161,8 @@ public class MainGameLogic : MonoBehaviour
                 targetCursor.transform.position = new Vector3(target.position.x, 5f, target.position.z);
             }
             //TODO consider prototyping lockon mode
-            Debug.Log(leader.GetUnitGroups().Count);
-            //update units following leader
+
+            //Following behavior
             Vector2 followPos = ToVec2(leader.transform.position);
             foreach (var group in leader.GetUnitGroups())
             {
@@ -183,6 +205,8 @@ public class MainGameLogic : MonoBehaviour
         }
         foreach (var building in bulidings)
         {
+            if (building.garrisonCount == building.maxGarrisonCount)
+                continue;
             building.timeSinceSpawn += Time.deltaTime;
             if (building.timeSinceSpawn > 1f/building.spawnRate)
             {

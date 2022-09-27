@@ -11,6 +11,7 @@ public class BulidingComponent : MonoBehaviour
     public float timeSinceSpawn = 0f;
     public TMPro.TextMeshPro textMesh;
     public int garrisonCount=0;
+    public int maxGarrisonCount = 10;
     // Start is called before the first frame update
     void Start()
     {
@@ -32,7 +33,7 @@ public class BulidingComponent : MonoBehaviour
 
     public void UpdateCount(int garrisonCount)
     {
-        this.garrisonCount = garrisonCount;
+        this.garrisonCount = Mathf.Min(garrisonCount, maxGarrisonCount);
 
         textMesh.text = "" + this.garrisonCount;
     }
