@@ -86,7 +86,7 @@ public class MainGameLogic : MonoBehaviour
                     return;
                 for (int i=0; i<bc.garrisonCount; ++i)
                 {
-                    GameObject unit = SpawnUnit(unitPrefabsByType[bc.unitType], target.transform.position, playerUnit.faction);
+                    GameObject unit = SpawnUnit(unitPrefabsByType[bc.unitType], ToVec2(target.position), playerUnit.faction);
                     Unit uc;
                     if (unit.TryGetComponent(out uc))
                         playerLeader.AddUnit(uc);
@@ -104,9 +104,10 @@ public class MainGameLogic : MonoBehaviour
             {
                 if (bc.faction != playerUnit.faction)
                     return;
+                Debug.Log("target position" + target.position);
                 for (int i = 0; i < bc.garrisonCount; ++i)
                 {
-                    GameObject unit = SpawnUnit(unitPrefabsByType[bc.unitType], target.transform.position, playerUnit.faction);
+                    GameObject unit = SpawnUnit(unitPrefabsByType[bc.unitType], ToVec2(target.position), playerUnit.faction);
                     Unit uc;
                     if (unit.TryGetComponent(out uc))
                         playerLeader.AddUnit(uc);
@@ -306,7 +307,7 @@ public class MainGameLogic : MonoBehaviour
 
     public static GameObject SpawnUnit(Transform prefab, Vector2 mapPosition, Faction faction)
     {
-        GameObject newUnit = GameObject.Instantiate(prefab.gameObject, new Vector3(mapPosition.x, 0, mapPosition.y), Quaternion.identity);
+        GameObject newUnit = GameObject.Instantiate(prefab.gameObject, ToVec3(mapPosition), Quaternion.identity);
         Unit unitComponent;
         if (newUnit.TryGetComponent<Unit>(out unitComponent))
             unitComponent.OnSpawn(faction);
