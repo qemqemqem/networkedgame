@@ -44,8 +44,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 40cce7a9e606d894e9f5845ba5ea3342, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  faction:
+    unitMaterial: {fileID: 0}
+    startUnitTypes: []
+    startUnitCounts: 
+    startPosition: {x: 0, y: 0}
+    isPlayerFaction: 0
+    isNeutral: 0
+    factionColor: {r: 0, g: 0, b: 0, a: 0}
   unitRenderer: {fileID: 557662668823505590}
   unitType: Dragon
+  speed: 30
+  desiredPosition: {x: NaN, y: NaN}
 --- !u!1 &7612524373457549230
 GameObject:
   m_ObjectHideFlags: 0

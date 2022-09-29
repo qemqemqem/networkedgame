@@ -8,6 +8,9 @@ public class Unit : MonoBehaviour
     public Renderer unitRenderer;
     public string unitType;
 
+    public float speed = .001f;
+    public Vector2 desiredPosition = MainGameLogic.BOGUS_VEC2;
+
     // Start is called before the first frame update
     void Start()
     {

@@ -6,6 +6,7 @@ using UnityEngine.InputSystem;
 
 public class MainGameLogic : MonoBehaviour
 {
+    public static readonly Vector2 BOGUS_VEC2 = new Vector2(float.NaN, float.NaN);
     private static readonly int NUM_BUILDINGS_PLAYER_FACTIONS = 1;
     private static readonly int NUM_BUILDINGS_NEUTRAL_FACTION = 50;
 
@@ -81,7 +82,29 @@ public class MainGameLogic : MonoBehaviour
             Unit playerUnit;
             if(target.TryGetComponent(out bc)&&playerLeader.TryGetComponent(out playerUnit))
             {
+                if (bc.faction != playerUnit.faction)
+                    return;
                 for (int i=0; i<bc.garrisonCount; ++i)
+                {
+                    GameObject unit = SpawnUnit(unitPrefabsByType[bc.unitType], target.transform.position, playerUnit.faction);
+                    Unit uc;
+                    if (unit.TryGetComponent(out uc))
+                        playerLeader.AddUnit(uc);
+                }
+                bc.UpdateCount(0);
+            }
+        };
+
+        primary.performed += ctx => {
+            if (target == null || playerLeader == null)
+                return;
+            BulidingComponent bc;
+            Unit playerUnit;
+            if (target.TryGetComponent(out bc) && playerLeader.TryGetComponent(out playerUnit))
+            {
+                if (bc.faction != playerUnit.faction)
+                    return;
+                for (int i = 0; i < bc.garrisonCount; ++i)
                 {
                     GameObject unit = SpawnUnit(unitPrefabsByType[bc.unitType], target.transform.position, playerUnit.faction);
                     Unit uc;
@@ -196,7 +219,8 @@ public class MainGameLogic : MonoBehaviour
                     Vector2 rowOrientation = group.rowOrientations[row];
                     Vector2 unitPos = Vector2.Perpendicular(rowOrientation) * startXOffset + (Vector2.Perpendicular(rowOrientation)*group.spacing*col);             
                     Unit u = group.units[i];
-                    u.transform.position =  ToVec3(unitPos+rowPos);
+                    u.desiredPosition = unitPos + rowPos;
+                    //u.transform.position =  ToVec3(unitPos+rowPos);
                 }
             }
 
@@ -214,6 +238,28 @@ public class MainGameLogic : MonoBehaviour
                 building.UpdateCount(building.garrisonCount+1);
             }
         }
+        foreach(var unit in units)
+        {
+            if (IsBogusVector(unit.desiredPosition))
+                continue;
+            float maxDist = unit.speed*Time.fixedDeltaTime;
+            if (maxDist == 0)
+                continue;
+            Vector3 desiredPos = ToVec3(unit.desiredPosition);
+            Vector3 desiredDelta = desiredPos - unit.transform.position;
+            if (desiredDelta.magnitude < maxDist)
+                unit.transform.position = desiredPos;
+            else
+            {
+                float progress = Mathf.Clamp01(maxDist / desiredDelta.magnitude);
+                unit.transform.position = Vector3.Lerp(unit.transform.position, desiredPos, progress);
+            }
+        }
+    }
+
+    public static bool IsBogusVector(Vector2 vec)
+    {
+        return float.IsNaN(vec.x) || float.IsNaN(vec.y);
     }
 
 
