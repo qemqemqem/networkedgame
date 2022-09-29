@@ -73,8 +73,26 @@ public class MainGameLogic : MonoBehaviour
         CreateWorld();
 
         //hacky actions should be per human player 
-        cycleUnitGroupLeft.performed += ctx=>Debug.Log("Previous unit group");
-        cycleUnitGroupRight.performed += ctx => Debug.Log("Next unit group");
+        cycleUnitGroupLeft.performed += ctx=> {
+            if (playerLeader == null || playerLeader.GetUnitGroups().Count == 0)
+                return;
+            int numGroups = playerLeader.GetUnitGroups().Count;
+            playerLeader.selectedUserGroup--;
+            playerLeader.selectedUserGroup %= numGroups;
+            if (playerLeader.selectedUserGroup < 0)
+                playerLeader.selectedUserGroup += numGroups;
+            Debug.Log("Previous unit group");
+        };
+        cycleUnitGroupRight.performed += ctx => {
+            if (playerLeader == null || playerLeader.GetUnitGroups().Count == 0)
+                return;
+            int numGroups = playerLeader.GetUnitGroups().Count;
+            playerLeader.selectedUserGroup++;
+            playerLeader.selectedUserGroup %= numGroups;
+            if (playerLeader.selectedUserGroup < 0)
+                playerLeader.selectedUserGroup += numGroups;
+            Debug.Log("Next unit group");
+        };
         foolow.performed += ctx => {
             if (target == null||playerLeader==null)
                 return;
@@ -100,19 +118,14 @@ public class MainGameLogic : MonoBehaviour
                 return;
             BulidingComponent bc;
             Unit playerUnit;
-            if (target.TryGetComponent(out bc) && playerLeader.TryGetComponent(out playerUnit))
+            if (target.TryGetComponent(out bc) && playerLeader.TryGetComponent(out playerUnit) && playerLeader.GetUnitGroups().Count>0)
             {
-                if (bc.faction != playerUnit.faction)
-                    return;
-                Debug.Log("target position" + target.position);
-                for (int i = 0; i < bc.garrisonCount; ++i)
+                UnitGroup unitGroup = playerLeader.GetUnitGroups()[playerLeader.selectedUserGroup];
+                unitGroup.following = false;
+                foreach(var u in unitGroup.units)
                 {
-                    GameObject unit = SpawnUnit(unitPrefabsByType[bc.unitType], ToVec2(target.position), playerUnit.faction);
-                    Unit uc;
-                    if (unit.TryGetComponent(out uc))
-                        playerLeader.AddUnit(uc);
+                    u.desiredPosition = ToVec2(target.position);
                 }
-                bc.UpdateCount(0);
             }
         };
 
@@ -190,6 +203,8 @@ public class MainGameLogic : MonoBehaviour
             Vector2 followPos = ToVec2(leader.transform.position);
             foreach (var group in leader.GetUnitGroups())
             {
+                if (!group.following)
+                    continue;
                 Vector2 currentOffset = followPos - group.pos;
                 if (currentOffset.magnitude > group.followDistance)
                 {

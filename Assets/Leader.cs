@@ -7,6 +7,7 @@ public class Leader : MonoBehaviour
     public bool isPc=false;
     private Dictionary<string, UnitGroup> units = new Dictionary<string, UnitGroup>();
     private List<UnitGroup> unitGroups = new List<UnitGroup>();
+    public int selectedUserGroup = -1;
 
     // Start is called before the first frame update
     void Start()
@@ -29,6 +30,8 @@ public class Leader : MonoBehaviour
             unitGroups.Add(unitGroup);
         }
         unitGroup.Add(unit);
+        if (unitGroups.Count == 1)
+            selectedUserGroup = 0;
     }
 
     public UnitGroup GetUnitGroup(string unitType)

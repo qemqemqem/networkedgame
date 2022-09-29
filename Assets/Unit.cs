@@ -42,6 +42,7 @@ public class UnitGroup
     public Vector2 orientation = Vector2.zero;
     public List<Vector2> rowPositions = new List<Vector2>();
     public List<Vector2> rowOrientations = new List<Vector2>();
+    public bool following = true;
 
     public UnitGroup()
     {
