@@ -68,12 +68,22 @@ public class UnitGroup
     public List<Unit> Remove(int num)
     {
         List<Unit> returnedUnits;
+        int lastRowCount = units.Count / rowWidth;
         if (num >= units.Count) {
             returnedUnits = new List<Unit>(this.units);
             this.units.Clear();
+            //TODO properly handle row pos and orientations
         } else {
             returnedUnits = this.units.GetRange(0, num);
             this.units.RemoveRange(0, num);
+            int newRowCount = units.Count / rowWidth;
+            if (lastRowCount != newRowCount) {
+                int toRemove = lastRowCount - newRowCount;
+                int start = rowPositions.Count - toRemove;
+                this.rowPositions.RemoveRange(start, toRemove);
+                this.rowOrientations.RemoveRange(start, toRemove);
+            }
+            
         }
         return returnedUnits;
     }

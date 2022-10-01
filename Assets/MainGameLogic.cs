@@ -281,7 +281,7 @@ public class MainGameLogic : MonoBehaviour
                 BulidingComponent bc;
                 if (unit.target.TryGetComponent(out bc))
                 {
-                    if (Vector2.Distance(ToVec2(unit.transform.position), ToVec2(target.transform.position)) < 1E-4)
+                    if (Vector2.Distance(ToVec2(unit.transform.position), ToVec2(unit.target.transform.position)) < 1E-4)
                     {
                         if (bc.faction == unit.faction)
                             bc.UpdateCount(bc.garrisonCount + 1);
