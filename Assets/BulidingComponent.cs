@@ -12,6 +12,9 @@ public class BulidingComponent : MonoBehaviour
     public TMPro.TextMeshPro textMesh;
     public int garrisonCount=0;
     public int maxGarrisonCount = 10;
+
+    //TODO use this for counts and fighting update
+    public List<UnitGroup> groupsInBuilding = new List<UnitGroup>();
     // Start is called before the first frame update
     void Start()
     {

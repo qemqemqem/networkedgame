@@ -121,9 +121,12 @@ public class MainGameLogic : MonoBehaviour
             if (target.TryGetComponent(out bc) && playerLeader.TryGetComponent(out playerUnit) && playerLeader.GetUnitGroups().Count>0)
             {
                 UnitGroup unitGroup = playerLeader.GetUnitGroups()[playerLeader.selectedUserGroup];
-                unitGroup.following = false;
-                foreach(var u in unitGroup.units)
+                int numToSend = unitGroup.rowWidth;
+                List<Unit> units = unitGroup.Remove(numToSend);
+                foreach (var u in units)
                 {
+                    u.action = UnitAction.CAPTURE;
+                    u.target = target;
                     u.desiredPosition = ToVec2(target.position);
                 }
             }
@@ -254,7 +257,8 @@ public class MainGameLogic : MonoBehaviour
                 building.UpdateCount(building.garrisonCount+1);
             }
         }
-        foreach(var unit in units)
+        ISet<Unit> unitsToDestroy = new HashSet<Unit>();
+        foreach (var unit in units)
         {
             if (IsBogusVector(unit.desiredPosition))
                 continue;
@@ -270,6 +274,36 @@ public class MainGameLogic : MonoBehaviour
                 float progress = Mathf.Clamp01(maxDist / desiredDelta.magnitude);
                 unit.transform.position = Vector3.Lerp(unit.transform.position, desiredPos, progress);
             }
+
+
+            if(unit.action == UnitAction.CAPTURE  && unit.target!=null)
+            {
+                BulidingComponent bc;
+                if (unit.target.TryGetComponent(out bc))
+                {
+                    if (Vector2.Distance(ToVec2(unit.transform.position), ToVec2(target.transform.position)) < 1E-4)
+                    {
+                        if (bc.faction == unit.faction)
+                            bc.UpdateCount(bc.garrisonCount + 1);
+                        else {
+                            if (bc.garrisonCount <= 0)
+                            {
+                                bc.OnSpawn(unit.faction);
+                                bc.UpdateCount(1);
+                            }
+                            else
+                            {
+                                bc.UpdateCount(bc.garrisonCount - 1);
+                            }
+                        }
+                        unitsToDestroy.Add(unit);
+                    }
+                }
+            }
+        }
+        foreach (var unit in unitsToDestroy){
+            units.Remove(unit);
+            GameObject.Destroy(unit.gameObject);//TODO should call method to make sure it is cleared from every locations (groups, nearby units/things etc.)
         }
     }
 

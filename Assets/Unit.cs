@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+public enum UnitAction {ATTACK, FOLLOW, CAPTURE, IDLE};
+
 public class Unit : MonoBehaviour
 {
     public Faction faction;
@@ -10,6 +12,8 @@ public class Unit : MonoBehaviour
 
     public float speed = .001f;
     public Vector2 desiredPosition = MainGameLogic.BOGUS_VEC2;
+    public Transform target=null;
+    public UnitAction action = UnitAction.FOLLOW;
 
     // Start is called before the first frame update
     void Start()
@@ -59,5 +63,18 @@ public class UnitGroup
         }
         this.units.Add(unit);
         
+    }
+
+    public List<Unit> Remove(int num)
+    {
+        List<Unit> returnedUnits;
+        if (num >= units.Count) {
+            returnedUnits = new List<Unit>(this.units);
+            this.units.Clear();
+        } else {
+            returnedUnits = this.units.GetRange(0, num);
+            this.units.RemoveRange(0, num);
+        }
+        return returnedUnits;
     }
 }
