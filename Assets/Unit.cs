@@ -39,9 +39,9 @@ public class UnitGroup
 {
     public List<Unit> units = new List<Unit>();
     //how many rows
-    public int rowWidth=4;
-    public float spacing=4f;
-    public float followDistance=5f;
+    public int rowWidth=8;
+    public float spacing=2.1f;
+    public float followDistance=2.2f;
     public Vector2 pos=Vector2.zero;
     public Vector2 orientation = Vector2.zero;
     public List<Vector2> rowPositions = new List<Vector2>();

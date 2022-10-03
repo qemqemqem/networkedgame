@@ -18,14 +18,12 @@ public class MainGameLogic : MonoBehaviour
     //private Dictionary<Vector2Int, GameObject> courseCollision = new Dictionary<Vector2Int, GameObject>();
 
     public Transform buildingPrefab;
-
     public Transform leaderPrefab;
 
     public List<Transform> unitPrefabs = new List<Transform>();
     private Dictionary<string, Transform> unitPrefabsByType = new Dictionary<string, Transform>();
-
-
     public List<Faction> factions = new List<Faction>();
+    public TMPro.TextMeshProUGUI screenCenterText;
 
     //controls stuff  should be per human leader/faction
     public InputAction move;
@@ -43,6 +41,8 @@ public class MainGameLogic : MonoBehaviour
     private Vector2 lookDirection=Vector2.up;
     private Leader playerLeader;
     private Transform target = null;
+
+    private BulidingComponent captureObjective = null;
 
 
 
@@ -290,6 +290,11 @@ public class MainGameLogic : MonoBehaviour
                             {
                                 bc.OnSpawn(unit.faction);
                                 bc.UpdateCount(1);
+                                if (bc == captureObjective)
+                                {
+                                    screenCenterText.text = "Victory!";
+                                    screenCenterText.gameObject.SetActive(true);
+                                }
                             }
                             else
                             {
@@ -323,7 +328,9 @@ public class MainGameLogic : MonoBehaviour
 
             for (int i = 0; i < numBuildings; ++i)
             {
-                SpawnBuliding(buildingPrefab, faction.startPosition+UnityEngine.Random.insideUnitCircle * startOffset, faction, unitType);
+                BulidingComponent bc = SpawnBuliding(buildingPrefab, faction.startPosition+UnityEngine.Random.insideUnitCircle * startOffset, faction, unitType);
+                if (!faction.isPlayerFaction && !faction.isNeutral)
+                    captureObjective = bc;
             }
             if (faction.isNeutral)
                 continue;
@@ -364,7 +371,7 @@ public class MainGameLogic : MonoBehaviour
         return newUnit;
     }
 
-    public static void SpawnBuliding(Transform prefab, Vector2 mapPosition, Faction faction, string unitType)
+    public static BulidingComponent SpawnBuliding(Transform prefab, Vector2 mapPosition, Faction faction, string unitType)
     {
         GameObject newUnit = GameObject.Instantiate(prefab.gameObject, new Vector3(mapPosition.x, 0, mapPosition.y), Quaternion.identity);
         BulidingComponent unitComponent;
@@ -373,6 +380,7 @@ public class MainGameLogic : MonoBehaviour
             unitComponent.unitType = unitType;
         }
         instance.bulidings.Add(unitComponent);
+        return unitComponent;
     }
 
     public static Vector2 ToVec2(Vector3 vec3)
