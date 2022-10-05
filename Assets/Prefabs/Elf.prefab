@@ -56,6 +56,9 @@ MonoBehaviour:
   unitType: Elf
   speed: 30
   desiredPosition: {x: NaN, y: NaN}
+  target: {fileID: 0}
+  action: 1
+  unitIcon: {fileID: 21300000, guid: ee35e97f91862cd4bbf8262cb580d9b4, type: 3}
 --- !u!1 &7334071070095379431
 GameObject:
   m_ObjectHideFlags: 0

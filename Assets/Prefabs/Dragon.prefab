@@ -56,6 +56,9 @@ MonoBehaviour:
   unitType: Dragon
   speed: 30
   desiredPosition: {x: NaN, y: NaN}
+  target: {fileID: 0}
+  action: 1
+  unitIcon: {fileID: 21300000, guid: 545d016352b1b9841afb183b7c7dde2a, type: 3}
 --- !u!1 &7612524373457549230
 GameObject:
   m_ObjectHideFlags: 0

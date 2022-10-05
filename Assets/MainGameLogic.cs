@@ -4,6 +4,8 @@ using UnityEngine;
 using System;
 using UnityEngine.InputSystem;
 
+public enum GameState {PLAYING, CHARACTER_SELECTION};
+
 public class MainGameLogic : MonoBehaviour
 {
     public static readonly Vector2 BOGUS_VEC2 = new Vector2(float.NaN, float.NaN);
@@ -24,6 +26,10 @@ public class MainGameLogic : MonoBehaviour
     private Dictionary<string, Transform> unitPrefabsByType = new Dictionary<string, Transform>();
     public List<Faction> factions = new List<Faction>();
     public TMPro.TextMeshProUGUI screenCenterText;
+    public UnityEngine.UI.Image selectedGroupIcon;
+
+
+    private GameState state = GameState.CHARACTER_SELECTION;
 
     //controls stuff  should be per human leader/faction
     public InputAction move;
@@ -71,9 +77,15 @@ public class MainGameLogic : MonoBehaviour
             unitPrefabsByType.Add(prefab.name, prefab);
         }
         CreateWorld();
+        SetPlayControls();
+        
 
+    }
+
+    void SetPlayControls()
+    {
         //hacky actions should be per human player 
-        cycleUnitGroupLeft.performed += ctx=> {
+        cycleUnitGroupLeft.performed += ctx => {
             if (playerLeader == null || playerLeader.GetUnitGroups().Count == 0)
                 return;
             int numGroups = playerLeader.GetUnitGroups().Count;
@@ -81,6 +93,7 @@ public class MainGameLogic : MonoBehaviour
             playerLeader.selectedUserGroup %= numGroups;
             if (playerLeader.selectedUserGroup < 0)
                 playerLeader.selectedUserGroup += numGroups;
+            selectedGroupIcon.sprite = playerLeader.GetUnitGroups()[playerLeader.selectedUserGroup].unitGroupImage;
             Debug.Log("Previous unit group");
         };
         cycleUnitGroupRight.performed += ctx => {
@@ -91,18 +104,19 @@ public class MainGameLogic : MonoBehaviour
             playerLeader.selectedUserGroup %= numGroups;
             if (playerLeader.selectedUserGroup < 0)
                 playerLeader.selectedUserGroup += numGroups;
+            selectedGroupIcon.sprite = playerLeader.GetUnitGroups()[playerLeader.selectedUserGroup].unitGroupImage;
             Debug.Log("Next unit group");
         };
         foolow.performed += ctx => {
-            if (target == null||playerLeader==null)
+            if (target == null || playerLeader == null)
                 return;
             BulidingComponent bc;
             Unit playerUnit;
-            if(target.TryGetComponent(out bc)&&playerLeader.TryGetComponent(out playerUnit))
+            if (target.TryGetComponent(out bc) && playerLeader.TryGetComponent(out playerUnit))
             {
                 if (bc.faction != playerUnit.faction)
                     return;
-                for (int i=0; i<bc.garrisonCount; ++i)
+                for (int i = 0; i < bc.garrisonCount; ++i)
                 {
                     GameObject unit = SpawnUnit(unitPrefabsByType[bc.unitType], ToVec2(target.position), playerUnit.faction);
                     Unit uc;
@@ -118,7 +132,7 @@ public class MainGameLogic : MonoBehaviour
                 return;
             BulidingComponent bc;
             Unit playerUnit;
-            if (target.TryGetComponent(out bc) && playerLeader.TryGetComponent(out playerUnit) && playerLeader.GetUnitGroups().Count>0)
+            if (target.TryGetComponent(out bc) && playerLeader.TryGetComponent(out playerUnit) && playerLeader.GetUnitGroups().Count > 0)
             {
                 UnitGroup unitGroup = playerLeader.GetUnitGroups()[playerLeader.selectedUserGroup];
                 int numToSend = unitGroup.rowWidth;
@@ -131,11 +145,82 @@ public class MainGameLogic : MonoBehaviour
                 }
             }
         };
+    }
 
+    void SetCharacterSelectionControls()
+    {
+        cycleUnitGroupLeft.Enable();
+        cycleUnitGroupRight.Enable();
+        //hacky actions should be per human player 
+        cycleUnitGroupLeft.performed += ctx => {
+            Debug.Log("Previous unit group");
+        };
+        cycleUnitGroupRight.performed += ctx => {
+            Debug.Log("Next unit group");
+        };
+        foolow.performed += ctx => {
+            if (target == null || playerLeader == null)
+                return;
+            BulidingComponent bc;
+            Unit playerUnit;
+            if (target.TryGetComponent(out bc) && playerLeader.TryGetComponent(out playerUnit))
+            {
+                if (bc.faction != playerUnit.faction)
+                    return;
+                for (int i = 0; i < bc.garrisonCount; ++i)
+                {
+                    GameObject unit = SpawnUnit(unitPrefabsByType[bc.unitType], ToVec2(target.position), playerUnit.faction);
+                    Unit uc;
+                    if (unit.TryGetComponent(out uc))
+                        playerLeader.AddUnit(uc);
+                }
+                bc.UpdateCount(0);
+            }
+        };
+
+        primary.performed += ctx => {
+            if (target == null || playerLeader == null)
+                return;
+            BulidingComponent bc;
+            Unit playerUnit;
+            if (target.TryGetComponent(out bc) && playerLeader.TryGetComponent(out playerUnit) && playerLeader.GetUnitGroups().Count > 0)
+            {
+                UnitGroup unitGroup = playerLeader.GetUnitGroups()[playerLeader.selectedUserGroup];
+                int numToSend = unitGroup.rowWidth;
+                List<Unit> units = unitGroup.Remove(numToSend);
+                foreach (var u in units)
+                {
+                    u.action = UnitAction.CAPTURE;
+                    u.target = target;
+                    u.desiredPosition = ToVec2(target.position);
+                }
+            }
+        };
     }
 
     // Update is called once per frame
     void FixedUpdate()
+    {
+        switch (state)
+        {
+            case GameState.CHARACTER_SELECTION:
+                //CharacterSelectionStateUpdate();
+                //fall through for now
+            case GameState.PLAYING:
+                PlayStateUpdate();
+                break;
+            default:
+                Debug.Log("not yet implemented");
+                break;
+        }
+    }
+
+    public void CharacterSelectionStateUpdate()
+    {
+
+    }
+
+    public void PlayStateUpdate()
     {
         if (instance == null)
             return;
@@ -154,9 +239,9 @@ public class MainGameLogic : MonoBehaviour
         {
             lookDirection = gamepadLook;
         }
-        
-        
-        
+
+
+
 
         foreach (var leader in leaders)
         {
@@ -172,11 +257,11 @@ public class MainGameLogic : MonoBehaviour
             List<Transform> nearbyThings = new List<Transform>();
             foreach (var unit in instance.units)
             {
-                if (unit.faction!=uc.faction&&(leader.transform.position - unit.transform.position).sqrMagnitude < targetRange * targetRange)
+                if (unit.faction != uc.faction && (leader.transform.position - unit.transform.position).sqrMagnitude < targetRange * targetRange)
                     nearbyThings.Add(unit.transform);
 
             }
-            foreach(var b in instance.bulidings)
+            foreach (var b in instance.bulidings)
             {
                 if ((leader.transform.position - b.transform.position).sqrMagnitude < targetRange * targetRange)
                     nearbyThings.Add(b.transform);
@@ -184,11 +269,12 @@ public class MainGameLogic : MonoBehaviour
 
             //Debug.Log(nearbyThings.Count);
             float maxAlignment = -1f;
-            
-            foreach (var t in nearbyThings) {
-                Vector3 screenPos = mainCamera.WorldToScreenPoint(t.position)-new Vector3(centerX, centerY, 0f);
+
+            foreach (var t in nearbyThings)
+            {
+                Vector3 screenPos = mainCamera.WorldToScreenPoint(t.position) - new Vector3(centerX, centerY, 0f);
                 float alignment = Vector2.Dot(lookDirection, new Vector2(screenPos.x, screenPos.y).normalized);
-                if(alignment > maxAlignment)
+                if (alignment > maxAlignment)
                 {
                     //Debug.Log(screenPos);
                     maxAlignment = alignment;
@@ -211,12 +297,12 @@ public class MainGameLogic : MonoBehaviour
                 Vector2 currentOffset = followPos - group.pos;
                 if (currentOffset.magnitude > group.followDistance)
                 {
-                    group.pos = followPos - currentOffset.normalized*group.followDistance;
+                    group.pos = followPos - currentOffset.normalized * group.followDistance;
                     group.orientation = currentOffset.normalized;
                 }
 
                 followPos = group.pos;
-                for(int i=0; i<group.rowPositions.Count; ++i)
+                for (int i = 0; i < group.rowPositions.Count; ++i)
                 {
                     Vector2 rowPos = group.rowPositions[i];
                     currentOffset = followPos - rowPos;
@@ -230,13 +316,13 @@ public class MainGameLogic : MonoBehaviour
                 }
 
                 float startXOffset = -(group.rowWidth * group.spacing) / 2f;
-                for (int i=0; i<group.units.Count; ++i)
+                for (int i = 0; i < group.units.Count; ++i)
                 {
                     int row = i / group.rowWidth;
                     int col = i % group.rowWidth;
                     Vector2 rowPos = group.rowPositions[row];
                     Vector2 rowOrientation = group.rowOrientations[row];
-                    Vector2 unitPos = Vector2.Perpendicular(rowOrientation) * startXOffset + (Vector2.Perpendicular(rowOrientation)*group.spacing*col);             
+                    Vector2 unitPos = Vector2.Perpendicular(rowOrientation) * startXOffset + (Vector2.Perpendicular(rowOrientation) * group.spacing * col);
                     Unit u = group.units[i];
                     u.desiredPosition = unitPos + rowPos;
                     //u.transform.position =  ToVec3(unitPos+rowPos);
@@ -251,10 +337,10 @@ public class MainGameLogic : MonoBehaviour
             if (building.garrisonCount == building.maxGarrisonCount)
                 continue;
             building.timeSinceSpawn += Time.deltaTime;
-            if (building.timeSinceSpawn > 1f/building.spawnRate)
+            if (building.timeSinceSpawn > 1f / building.spawnRate)
             {
                 building.timeSinceSpawn = 0f;
-                building.UpdateCount(building.garrisonCount+1);
+                building.UpdateCount(building.garrisonCount + 1);
             }
         }
         ISet<Unit> unitsToDestroy = new HashSet<Unit>();
@@ -262,7 +348,7 @@ public class MainGameLogic : MonoBehaviour
         {
             if (IsBogusVector(unit.desiredPosition))
                 continue;
-            float maxDist = unit.speed*Time.fixedDeltaTime;
+            float maxDist = unit.speed * Time.fixedDeltaTime;
             if (maxDist == 0)
                 continue;
             Vector3 desiredPos = ToVec3(unit.desiredPosition);
@@ -276,7 +362,7 @@ public class MainGameLogic : MonoBehaviour
             }
 
 
-            if(unit.action == UnitAction.CAPTURE  && unit.target!=null)
+            if (unit.action == UnitAction.CAPTURE && unit.target != null)
             {
                 BulidingComponent bc;
                 if (unit.target.TryGetComponent(out bc))
@@ -285,7 +371,8 @@ public class MainGameLogic : MonoBehaviour
                     {
                         if (bc.faction == unit.faction)
                             bc.UpdateCount(bc.garrisonCount + 1);
-                        else {
+                        else
+                        {
                             if (bc.garrisonCount <= 0)
                             {
                                 bc.OnSpawn(unit.faction);
@@ -306,7 +393,8 @@ public class MainGameLogic : MonoBehaviour
                 }
             }
         }
-        foreach (var unit in unitsToDestroy){
+        foreach (var unit in unitsToDestroy)
+        {
             units.Remove(unit);
             GameObject.Destroy(unit.gameObject);//TODO should call method to make sure it is cleared from every locations (groups, nearby units/things etc.)
         }

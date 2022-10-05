@@ -57,6 +57,9 @@ MonoBehaviour:
   unitType: Leader
   speed: 40
   desiredPosition: {x: NaN, y: NaN}
+  target: {fileID: 0}
+  action: 1
+  unitIcon: {fileID: 21300000, guid: fcd6f5c1cdd84f74097a9fc54dcc7d06, type: 3}
 --- !u!114 &4317021591232644692
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -70,6 +73,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   isPc: 0
+  selectedUserGroup: -1
 --- !u!1 &4210422757628687625
 GameObject:
   m_ObjectHideFlags: 0

@@ -14,6 +14,7 @@ public class Unit : MonoBehaviour
     public Vector2 desiredPosition = MainGameLogic.BOGUS_VEC2;
     public Transform target=null;
     public UnitAction action = UnitAction.FOLLOW;
+    public Sprite unitIcon;
 
     // Start is called before the first frame update
     void Start()
@@ -47,6 +48,7 @@ public class UnitGroup
     public List<Vector2> rowPositions = new List<Vector2>();
     public List<Vector2> rowOrientations = new List<Vector2>();
     public bool following = true;
+    public Sprite unitGroupImage;
 
     public UnitGroup()
     {
@@ -61,6 +63,8 @@ public class UnitGroup
             rowPositions.Add(Vector2.zero);
             rowOrientations.Add(Vector2.zero);
         }
+        if (this.units.Count == 0)
+            unitGroupImage = unit.unitIcon;
         this.units.Add(unit);
         
     }
