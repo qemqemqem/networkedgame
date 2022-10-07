@@ -132,14 +132,20 @@ public class MainGameLogic : MonoBehaviour
         cycleUnitGroupLeft.performed += cycleLeftAction;
         cycleUnitGroupRight.performed += cycleRightAction;
         foolow.performed += ctx => {
-            if (target == null || playerLeader == null)
+            if (target == null || playerLeader == null) {
+                cycleRightAction.Invoke(ctx);
                 return;
+            }
+                
+
             BulidingComponent bc;
             Unit playerUnit;
             if (target.TryGetComponent(out bc) && playerLeader.TryGetComponent(out playerUnit))
             {
-                if (bc.faction != playerUnit.faction)
+                if (bc.faction != playerUnit.faction || bc.garrisonCount == 0) {
+                    cycleRightAction.Invoke(ctx);
                     return;
+                }
                 for (int i = 0; i < bc.garrisonCount; ++i)
                 {
                     GameObject unit = SpawnUnit(unitPrefabsByType[bc.unitType], ToVec2(target.position), playerUnit.faction);
@@ -148,7 +154,8 @@ public class MainGameLogic : MonoBehaviour
                         playerLeader.AddUnit(uc);
                 }
                 bc.UpdateCount(0);
-            }
+            } else
+                cycleRightAction.Invoke(ctx);
         };
 
         primary.performed += ctx => {
