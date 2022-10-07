@@ -15,6 +15,7 @@ public class Unit : MonoBehaviour
     public Transform target=null;
     public UnitAction action = UnitAction.FOLLOW;
     public Sprite unitIcon;
+    public GameObject selectionHighlight;
 
     // Start is called before the first frame update
     void Start()

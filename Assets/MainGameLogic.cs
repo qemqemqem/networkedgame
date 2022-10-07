@@ -29,7 +29,7 @@ public class MainGameLogic : MonoBehaviour
     public UnityEngine.UI.Image selectedGroupIcon;
 
 
-    private GameState state = GameState.CHARACTER_SELECTION;
+    private GameState state = GameState.PLAYING;
 
     //controls stuff  should be per human leader/faction
     public InputAction move;
@@ -47,8 +47,9 @@ public class MainGameLogic : MonoBehaviour
     private Vector2 lookDirection=Vector2.up;
     private Leader playerLeader;
     private Transform target = null;
-
     private BulidingComponent captureObjective = null;
+    private Action<InputAction.CallbackContext> cycleLeftAction;
+    private Action<InputAction.CallbackContext> cycleRightAction;
 
 
 
@@ -84,29 +85,52 @@ public class MainGameLogic : MonoBehaviour
 
     void SetPlayControls()
     {
-        //hacky actions should be per human player 
-        cycleUnitGroupLeft.performed += ctx => {
-            if (playerLeader == null || playerLeader.GetUnitGroups().Count == 0)
+        cycleLeftAction = ctx => {
+            if (playerLeader == null || playerLeader.GetUnitGroups().Count <= 1)
                 return;
+            UnitGroup currentGroup = playerLeader.GetUnitGroups()[playerLeader.selectedUserGroup];
+            foreach (Unit unit in currentGroup.units)
+            {
+                unit.selectionHighlight.SetActive(false);
+            }
             int numGroups = playerLeader.GetUnitGroups().Count;
             playerLeader.selectedUserGroup--;
             playerLeader.selectedUserGroup %= numGroups;
             if (playerLeader.selectedUserGroup < 0)
                 playerLeader.selectedUserGroup += numGroups;
-            selectedGroupIcon.sprite = playerLeader.GetUnitGroups()[playerLeader.selectedUserGroup].unitGroupImage;
+            UnitGroup selectedGroup = playerLeader.GetUnitGroups()[playerLeader.selectedUserGroup];
+            selectedGroupIcon.sprite = selectedGroup.unitGroupImage;
+            foreach(Unit unit in selectedGroup.units)
+            {
+                unit.selectionHighlight.SetActive(true);
+            }
+            //highlight the first four elements of the group (and make sure we update it when we highlight the next group)
             Debug.Log("Previous unit group");
         };
-        cycleUnitGroupRight.performed += ctx => {
+        cycleRightAction = ctx => {
             if (playerLeader == null || playerLeader.GetUnitGroups().Count == 0)
                 return;
+            UnitGroup currentGroup = playerLeader.GetUnitGroups()[playerLeader.selectedUserGroup];
+            foreach (Unit unit in currentGroup.units)
+            {
+                unit.selectionHighlight.SetActive(false);
+            }
             int numGroups = playerLeader.GetUnitGroups().Count;
             playerLeader.selectedUserGroup++;
             playerLeader.selectedUserGroup %= numGroups;
             if (playerLeader.selectedUserGroup < 0)
                 playerLeader.selectedUserGroup += numGroups;
-            selectedGroupIcon.sprite = playerLeader.GetUnitGroups()[playerLeader.selectedUserGroup].unitGroupImage;
+            UnitGroup selectedGroup = playerLeader.GetUnitGroups()[playerLeader.selectedUserGroup];
+            selectedGroupIcon.sprite = selectedGroup.unitGroupImage;
+            foreach (Unit unit in selectedGroup.units)
+            {
+                unit.selectionHighlight.SetActive(true);
+            }
             Debug.Log("Next unit group");
         };
+        //hacky actions should be per human player 
+        cycleUnitGroupLeft.performed += cycleLeftAction;
+        cycleUnitGroupRight.performed += cycleRightAction;
         foolow.performed += ctx => {
             if (target == null || playerLeader == null)
                 return;
@@ -149,53 +173,19 @@ public class MainGameLogic : MonoBehaviour
 
     void SetCharacterSelectionControls()
     {
+        cycleUnitGroupLeft.performed -= cycleLeftAction;
+        cycleUnitGroupRight.performed -= cycleRightAction;
         cycleUnitGroupLeft.Enable();
         cycleUnitGroupRight.Enable();
         //hacky actions should be per human player 
-        cycleUnitGroupLeft.performed += ctx => {
-            Debug.Log("Previous unit group");
+        cycleLeftAction = ctx => {
+            Debug.Log("Previous leader");
         };
-        cycleUnitGroupRight.performed += ctx => {
-            Debug.Log("Next unit group");
+        cycleUnitGroupLeft.performed += cycleLeftAction;
+        cycleRightAction = ctx => {
+            Debug.Log("Next leader");
         };
-        foolow.performed += ctx => {
-            if (target == null || playerLeader == null)
-                return;
-            BulidingComponent bc;
-            Unit playerUnit;
-            if (target.TryGetComponent(out bc) && playerLeader.TryGetComponent(out playerUnit))
-            {
-                if (bc.faction != playerUnit.faction)
-                    return;
-                for (int i = 0; i < bc.garrisonCount; ++i)
-                {
-                    GameObject unit = SpawnUnit(unitPrefabsByType[bc.unitType], ToVec2(target.position), playerUnit.faction);
-                    Unit uc;
-                    if (unit.TryGetComponent(out uc))
-                        playerLeader.AddUnit(uc);
-                }
-                bc.UpdateCount(0);
-            }
-        };
-
-        primary.performed += ctx => {
-            if (target == null || playerLeader == null)
-                return;
-            BulidingComponent bc;
-            Unit playerUnit;
-            if (target.TryGetComponent(out bc) && playerLeader.TryGetComponent(out playerUnit) && playerLeader.GetUnitGroups().Count > 0)
-            {
-                UnitGroup unitGroup = playerLeader.GetUnitGroups()[playerLeader.selectedUserGroup];
-                int numToSend = unitGroup.rowWidth;
-                List<Unit> units = unitGroup.Remove(numToSend);
-                foreach (var u in units)
-                {
-                    u.action = UnitAction.CAPTURE;
-                    u.target = target;
-                    u.desiredPosition = ToVec2(target.position);
-                }
-            }
-        };
+        cycleUnitGroupRight.performed += cycleRightAction;
     }
 
     // Update is called once per frame
@@ -204,6 +194,8 @@ public class MainGameLogic : MonoBehaviour
         switch (state)
         {
             case GameState.CHARACTER_SELECTION:
+                SetCharacterSelectionControls();
+                break;
                 //CharacterSelectionStateUpdate();
                 //fall through for now
             case GameState.PLAYING:
@@ -381,6 +373,11 @@ public class MainGameLogic : MonoBehaviour
                                 {
                                     screenCenterText.text = "Victory!";
                                     screenCenterText.gameObject.SetActive(true);
+                                    //TODO actually have function for entering the state and do all the appropriate cleanup etc.
+                                    //create the world in startup
+                                    //cycle through the list of leaders and pan the camera between them
+                                    //
+                                    state = GameState.CHARACTER_SELECTION;
                                 }
                             }
                             else
@@ -437,6 +434,8 @@ public class MainGameLogic : MonoBehaviour
                 Unit uc;
                 if(unit.TryGetComponent(out uc))
                     lc.AddUnit(uc);
+                if (faction.isPlayerFaction)
+                    uc.selectionHighlight.SetActive(true);
             }
             if (faction.isPlayerFaction)
             {
