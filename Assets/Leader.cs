@@ -21,7 +21,7 @@ public class Leader : MonoBehaviour
         
     }
 
-    public void AddUnit(Unit unit)
+    public UnitGroup AddUnit(Unit unit)
     {
         UnitGroup unitGroup;
         if (!units.TryGetValue(unit.unitType, out unitGroup)) {
@@ -32,6 +32,7 @@ public class Leader : MonoBehaviour
         unitGroup.Add(unit);
         if (unitGroups.Count == 1)
             selectedUserGroup = 0;
+        return unitGroup;
     }
 
     public UnitGroup GetUnitGroup(string unitType)
@@ -45,6 +46,8 @@ public class Leader : MonoBehaviour
     public void RemoveUnitGroup(UnitGroup unitGroup)
     {
         unitGroups.Remove(unitGroup);
+        if (selectedUserGroup == unitGroups.Count)
+            selectedUserGroup--;
         ISet<string> typesToRemove = new HashSet<string>();
         foreach(var entry in units)
         {

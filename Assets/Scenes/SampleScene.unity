@@ -682,54 +682,6 @@ MonoBehaviour:
       m_Groups: 
       m_Action: Look
       m_Flags: 0
-  primary:
-    m_Name: Primary
-    m_Type: 0
-    m_ExpectedControlType: 
-    m_Id: fca352ba-edcb-40cf-a1e7-cfa931216995
-    m_Processors: 
-    m_Interactions: 
-    m_SingletonActionBindings:
-    - m_Name: 
-      m_Id: bad8c45d-056b-4a07-bfce-ec7449d5e49c
-      m_Path: <Gamepad>/buttonWest
-      m_Interactions: 
-      m_Processors: 
-      m_Groups: 
-      m_Action: Primary
-      m_Flags: 0
-    - m_Name: 
-      m_Id: c0955e9e-6e59-437a-9a91-84b9e9362c36
-      m_Path: <Mouse>/leftButton
-      m_Interactions: 
-      m_Processors: 
-      m_Groups: 
-      m_Action: Primary
-      m_Flags: 0
-  foolow:
-    m_Name: Foolow
-    m_Type: 0
-    m_ExpectedControlType: 
-    m_Id: 77d89317-793f-407c-a37e-80256490bcab
-    m_Processors: 
-    m_Interactions: 
-    m_SingletonActionBindings:
-    - m_Name: 
-      m_Id: e8011c00-6584-40d8-8243-72c1c8859d13
-      m_Path: <Gamepad>/buttonSouth
-      m_Interactions: Tap
-      m_Processors: 
-      m_Groups: 
-      m_Action: Foolow
-      m_Flags: 0
-    - m_Name: 
-      m_Id: 246235c6-d0e8-4b31-9f1d-55bc9d09ca9a
-      m_Path: <Mouse>/rightButton
-      m_Interactions: 
-      m_Processors: 
-      m_Groups: 
-      m_Action: Foolow
-      m_Flags: 0
   mousePos:
     m_Name: Mouse Pos
     m_Type: 0
@@ -761,6 +713,54 @@ MonoBehaviour:
       m_Processors: 
       m_Groups: 
       m_Action: Mouse Move
+      m_Flags: 0
+  primary:
+    m_Name: Primary
+    m_Type: 0
+    m_ExpectedControlType: 
+    m_Id: fca352ba-edcb-40cf-a1e7-cfa931216995
+    m_Processors: 
+    m_Interactions: 
+    m_SingletonActionBindings:
+    - m_Name: 
+      m_Id: bad8c45d-056b-4a07-bfce-ec7449d5e49c
+      m_Path: <XInputController>/rightShoulder
+      m_Interactions: Tap
+      m_Processors: 
+      m_Groups: 
+      m_Action: Primary
+      m_Flags: 0
+    - m_Name: 
+      m_Id: c0955e9e-6e59-437a-9a91-84b9e9362c36
+      m_Path: <Mouse>/leftButton
+      m_Interactions: 
+      m_Processors: 
+      m_Groups: 
+      m_Action: Primary
+      m_Flags: 0
+  secondary:
+    m_Name: Secondary
+    m_Type: 0
+    m_ExpectedControlType: 
+    m_Id: 0ed59820-855d-412c-81c6-59fe0f1befda
+    m_Processors: 
+    m_Interactions: 
+    m_SingletonActionBindings:
+    - m_Name: 
+      m_Id: b8cae086-0887-4b32-b7cf-0b1b603ef3ed
+      m_Path: <Mouse>/rightButton
+      m_Interactions: Tap
+      m_Processors: 
+      m_Groups: 
+      m_Action: Secondary
+      m_Flags: 0
+    - m_Name: 
+      m_Id: 27f4c326-ddb0-406f-b30f-03a93b31833b
+      m_Path: <XInputController>/leftShoulder
+      m_Interactions: Tap
+      m_Processors: 
+      m_Groups: 
+      m_Action: Secondary
       m_Flags: 0
   cycleUnitGroupLeft:
     m_Name: Cycle Unit Group Left

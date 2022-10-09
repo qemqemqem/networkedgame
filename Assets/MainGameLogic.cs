@@ -6,6 +6,25 @@ using UnityEngine.InputSystem;
 
 public enum GameState {PLAYING, CHARACTER_SELECTION};
 
+public class ClearableInputAction
+{
+    public readonly InputAction action;
+    private Action<InputAction.CallbackContext> callback;
+    public ClearableInputAction(InputAction inputAction)
+    {
+        this.action = inputAction;
+    }
+
+    public void SetCallback(Action<InputAction.CallbackContext> callback)
+    {
+        if (this.callback != null)
+            this.action.performed -= this.callback;
+        if(callback!=null)
+            this.action.performed += callback;
+        this.callback = callback;
+    }
+}
+
 public class MainGameLogic : MonoBehaviour
 {
     public static readonly Vector2 BOGUS_VEC2 = new Vector2(float.NaN, float.NaN);
@@ -34,12 +53,26 @@ public class MainGameLogic : MonoBehaviour
     //controls stuff  should be per human leader/faction
     public InputAction move;
     public InputAction look;
-    public InputAction primary;
-    public InputAction foolow;
     public InputAction mousePos;
     public InputAction mouseMove;
+
+    public InputAction primary;
+    public ClearableInputAction primaryButton;
+    public InputAction secondary;
+    public ClearableInputAction secondaryButton;
     public InputAction cycleUnitGroupLeft;
+    public ClearableInputAction cycleUnitGroupLeftButton;
     public InputAction cycleUnitGroupRight;
+    public ClearableInputAction cycleUnitGroupRightButton;
+
+
+
+
+
+
+
+
+
     public Camera mainCamera;
     public Transform targetCursor;
     public Vector3 cameraOffset = new Vector3(0,50,-50);
@@ -48,28 +81,21 @@ public class MainGameLogic : MonoBehaviour
     private Leader playerLeader;
     private Transform target = null;
     private BulidingComponent captureObjective = null;
-    private Action<InputAction.CallbackContext> cycleLeftAction;
-    private Action<InputAction.CallbackContext> cycleRightAction;
-
-
-
 
     private static MainGameLogic instance;
+
+
+    private ISet<Unit> highlightedUnits = new HashSet<Unit>();
 
     // Start is called before the first frame update
     void Start()
     {
+        primaryButton = new ClearableInputAction(primary);
+        secondaryButton = new ClearableInputAction(secondary);
+        cycleUnitGroupLeftButton = new ClearableInputAction(cycleUnitGroupLeft);
+        cycleUnitGroupRightButton = new ClearableInputAction(cycleUnitGroupRight);
         //controlls stuff shoudl be per human leader/faction
-        move.Enable();
-        look.Enable();
-        primary.Enable();
-        mousePos.Enable();
-        mouseMove.Enable();
-
-        foolow.Enable();
-
-        cycleUnitGroupLeft.Enable();
-        cycleUnitGroupRight.Enable();
+        
             
         instance = this;
         unitPrefabsByType.Clear();
@@ -83,57 +109,40 @@ public class MainGameLogic : MonoBehaviour
 
     }
 
+    void ClearInputActions()
+    {
+        primaryButton.SetCallback(null);
+        secondaryButton.SetCallback(null);
+        cycleUnitGroupLeftButton.SetCallback(null);
+        cycleUnitGroupRightButton.SetCallback(null);
+    }
+
     void SetPlayControls()
     {
-        cycleLeftAction = ctx => {
+        move.Enable();
+        look.Enable();
+        mousePos.Enable();
+        mouseMove.Enable();
+        secondary.Enable();
+        primary.Enable();
+        cycleUnitGroupLeft.Enable();
+        cycleUnitGroupRight.Enable();
+        cycleUnitGroupLeftButton.SetCallback(ctx => {
             if (playerLeader == null || playerLeader.GetUnitGroups().Count <= 1)
                 return;
-            UnitGroup currentGroup = playerLeader.GetUnitGroups()[playerLeader.selectedUserGroup];
-            foreach (Unit unit in currentGroup.units)
-            {
-                unit.selectionHighlight.SetActive(false);
-            }
-            int numGroups = playerLeader.GetUnitGroups().Count;
-            playerLeader.selectedUserGroup--;
-            playerLeader.selectedUserGroup %= numGroups;
-            if (playerLeader.selectedUserGroup < 0)
-                playerLeader.selectedUserGroup += numGroups;
-            UnitGroup selectedGroup = playerLeader.GetUnitGroups()[playerLeader.selectedUserGroup];
-            selectedGroupIcon.sprite = selectedGroup.unitGroupImage;
-            foreach(Unit unit in selectedGroup.units)
-            {
-                unit.selectionHighlight.SetActive(true);
-            }
-            //highlight the first four elements of the group (and make sure we update it when we highlight the next group)
+            CycleUnitGroupSelection(true);
             Debug.Log("Previous unit group");
-        };
-        cycleRightAction = ctx => {
+        });
+        cycleUnitGroupRightButton.SetCallback(ctx => {
             if (playerLeader == null || playerLeader.GetUnitGroups().Count == 0)
                 return;
-            UnitGroup currentGroup = playerLeader.GetUnitGroups()[playerLeader.selectedUserGroup];
-            foreach (Unit unit in currentGroup.units)
-            {
-                unit.selectionHighlight.SetActive(false);
-            }
-            int numGroups = playerLeader.GetUnitGroups().Count;
-            playerLeader.selectedUserGroup++;
-            playerLeader.selectedUserGroup %= numGroups;
-            if (playerLeader.selectedUserGroup < 0)
-                playerLeader.selectedUserGroup += numGroups;
-            UnitGroup selectedGroup = playerLeader.GetUnitGroups()[playerLeader.selectedUserGroup];
-            selectedGroupIcon.sprite = selectedGroup.unitGroupImage;
-            foreach (Unit unit in selectedGroup.units)
-            {
-                unit.selectionHighlight.SetActive(true);
-            }
+            CycleUnitGroupSelection(false);
             Debug.Log("Next unit group");
-        };
-        //hacky actions should be per human player 
-        cycleUnitGroupLeft.performed += cycleLeftAction;
-        cycleUnitGroupRight.performed += cycleRightAction;
-        foolow.performed += ctx => {
+        });
+        secondaryButton.SetCallback(ctx => {
+            Debug.Log("secondary button");
             if (target == null || playerLeader == null) {
-                cycleRightAction.Invoke(ctx);
+                CycleUnitGroupSelection(true);
                 return;
             }
                 
@@ -142,23 +151,32 @@ public class MainGameLogic : MonoBehaviour
             Unit playerUnit;
             if (target.TryGetComponent(out bc) && playerLeader.TryGetComponent(out playerUnit))
             {
-                if (bc.faction != playerUnit.faction || bc.garrisonCount == 0) {
-                    cycleRightAction.Invoke(ctx);
+                if (bc.faction != playerUnit.faction || bc.garrisonCount == 0)
+                {
+                    CycleUnitGroupSelection(true);
                     return;
                 }
+                UnitGroup groupAddedTo=null;
                 for (int i = 0; i < bc.garrisonCount; ++i)
                 {
                     GameObject unit = SpawnUnit(unitPrefabsByType[bc.unitType], ToVec2(target.position), playerUnit.faction);
                     Unit uc;
                     if (unit.TryGetComponent(out uc))
-                        playerLeader.AddUnit(uc);
+                    {
+                        groupAddedTo = playerLeader.AddUnit(uc);
+                    }
                 }
+                if(playerLeader.GetUnitGroups().Count==1||playerLeader.GetUnitGroups()[playerLeader.selectedUserGroup]==groupAddedTo)
+                    ResetUnitHighlighting(new HashSet<Unit>(groupAddedTo.units));
                 bc.UpdateCount(0);
-            } else
-                cycleRightAction.Invoke(ctx);
-        };
+            }
+            else
+            {
+                CycleUnitGroupSelection(true);
+            }
+        });
 
-        primary.performed += ctx => {
+        primaryButton.SetCallback(ctx => {
             if (target == null || playerLeader == null)
                 return;
             BulidingComponent bc;
@@ -174,25 +192,56 @@ public class MainGameLogic : MonoBehaviour
                     u.target = target;
                     u.desiredPosition = ToVec2(target.position);
                 }
+                if (unitGroup.units.Count == 0)
+                {
+                    playerLeader.RemoveUnitGroup(unitGroup);
+                    if (playerLeader.GetUnitGroups().Count > 0)
+                        ResetUnitHighlighting(new HashSet<Unit>(playerLeader.GetUnitGroups()[playerLeader.selectedUserGroup].units));
+                }
             }
-        };
+        });
+    }
+
+    private void ResetUnitHighlighting(ISet<Unit> unitsToHighlight)
+    {
+        highlightedUnits.UnionWith(unitsToHighlight);
+        foreach (var unit in highlightedUnits)
+            if (!unitsToHighlight.Contains(unit))
+                unit.selectionHighlight.SetActive(false);
+            else
+                unit.selectionHighlight.SetActive(true);
+        highlightedUnits=unitsToHighlight;
+    }
+
+    private void CycleUnitGroupSelection(bool backwards)
+    {
+        if (playerLeader == null || playerLeader.GetUnitGroups().Count <= 1)
+            return;
+
+        int numGroups = playerLeader.GetUnitGroups().Count;
+        if (backwards)
+            playerLeader.selectedUserGroup--;
+        else
+            playerLeader.selectedUserGroup++;
+        playerLeader.selectedUserGroup %= numGroups;
+        if (playerLeader.selectedUserGroup < 0)
+            playerLeader.selectedUserGroup += numGroups;
+
+        UnitGroup selectedGroup = playerLeader.GetUnitGroups()[playerLeader.selectedUserGroup];
+        selectedGroupIcon.sprite = selectedGroup.unitGroupImage;
+        ResetUnitHighlighting(new HashSet<Unit>(selectedGroup.units));
     }
 
     void SetCharacterSelectionControls()
     {
-        cycleUnitGroupLeft.performed -= cycleLeftAction;
-        cycleUnitGroupRight.performed -= cycleRightAction;
-        cycleUnitGroupLeft.Enable();
-        cycleUnitGroupRight.Enable();
-        //hacky actions should be per human player 
-        cycleLeftAction = ctx => {
+        ClearInputActions();
+        cycleUnitGroupLeftButton.SetCallback(ctx => {
             Debug.Log("Previous leader");
-        };
-        cycleUnitGroupLeft.performed += cycleLeftAction;
-        cycleRightAction = ctx => {
+        });
+
+        cycleUnitGroupRightButton.SetCallback(ctx => {
             Debug.Log("Next leader");
-        };
-        cycleUnitGroupRight.performed += cycleRightAction;
+        });
     }
 
     // Update is called once per frame
@@ -216,7 +265,7 @@ public class MainGameLogic : MonoBehaviour
 
     public void CharacterSelectionStateUpdate()
     {
-
+        
     }
 
     public void PlayStateUpdate()
@@ -400,7 +449,9 @@ public class MainGameLogic : MonoBehaviour
         foreach (var unit in unitsToDestroy)
         {
             units.Remove(unit);
+            highlightedUnits.Remove(unit);
             GameObject.Destroy(unit.gameObject);//TODO should call method to make sure it is cleared from every locations (groups, nearby units/things etc.)
+            
         }
     }
 
@@ -435,6 +486,7 @@ public class MainGameLogic : MonoBehaviour
                 if (faction.isPlayerFaction)
                     playerLeader = lc;
             }
+            ISet<Unit> unitsToHighlight = new HashSet<Unit>();
             for(int i=0; i<faction.startUnitCounts[0]; ++i)
             {
                 GameObject unit = SpawnUnit(unitPrefabsByType[unitType], faction.startPosition + UnityEngine.Random.insideUnitCircle * 20f, faction);
@@ -442,13 +494,14 @@ public class MainGameLogic : MonoBehaviour
                 if(unit.TryGetComponent(out uc))
                     lc.AddUnit(uc);
                 if (faction.isPlayerFaction)
-                    uc.selectionHighlight.SetActive(true);
+                    unitsToHighlight.Add(uc);
             }
             if (faction.isPlayerFaction)
             {
                 mainCamera.transform.SetParent(leader.transform);
                 mainCamera.transform.localPosition = cameraOffset;
                 mainCamera.transform.localRotation = Quaternion.LookRotation(-cameraOffset, Vector3.up);
+                ResetUnitHighlighting(unitsToHighlight);
             }
 
         }
