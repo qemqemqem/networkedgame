@@ -48,7 +48,9 @@ public class MainGameLogic : MonoBehaviour
     public UnityEngine.UI.Image selectedGroupIcon;
 
 
-    private GameState state = GameState.PLAYING;
+    private GameState state = GameState.CHARACTER_SELECTION;
+
+    public Transform cursor3D;
 
     //controls stuff  should be per human leader/faction
     public InputAction move;
@@ -79,6 +81,7 @@ public class MainGameLogic : MonoBehaviour
     public float targetRange=10f;
     private Vector2 lookDirection=Vector2.up;
     private Leader playerLeader;
+    private Faction playerFaction;
     private Transform target = null;
     private BulidingComponent captureObjective = null;
 
@@ -87,6 +90,10 @@ public class MainGameLogic : MonoBehaviour
 
     private ISet<Unit> highlightedUnits = new HashSet<Unit>();
 
+
+
+    private int currentLeaderIndex = 0;
+
     // Start is called before the first frame update
     void Start()
     {
@@ -94,7 +101,6 @@ public class MainGameLogic : MonoBehaviour
         secondaryButton = new ClearableInputAction(secondary);
         cycleUnitGroupLeftButton = new ClearableInputAction(cycleUnitGroupLeft);
         cycleUnitGroupRightButton = new ClearableInputAction(cycleUnitGroupRight);
-        //controlls stuff shoudl be per human leader/faction
         
             
         instance = this;
@@ -104,7 +110,7 @@ public class MainGameLogic : MonoBehaviour
             unitPrefabsByType.Add(prefab.name, prefab);
         }
         CreateWorld();
-        SetPlayControls();
+        SetCharacterSelectionControls();
         
 
     }
@@ -119,6 +125,23 @@ public class MainGameLogic : MonoBehaviour
 
     void SetPlayControls()
     {
+        if (playerLeader == null)
+            return;
+        ClearInputActions();
+        mainCamera.transform.SetParent(playerLeader.transform);
+        mainCamera.transform.localPosition = cameraOffset;
+        mainCamera.transform.localRotation = Quaternion.LookRotation(-cameraOffset, Vector3.up);
+
+        //This highlighting logic should be moved to a method, also it's wrong and should only highlight the selected units
+        ISet<Unit> unitsToHighlight = new HashSet<Unit>();
+        foreach(var group in playerLeader.GetUnitGroups())
+        {
+            foreach (var u in group.units)
+                unitsToHighlight.Add(u);
+        }
+        ResetUnitHighlighting(unitsToHighlight);
+
+
         move.Enable();
         look.Enable();
         mousePos.Enable();
@@ -232,15 +255,77 @@ public class MainGameLogic : MonoBehaviour
         ResetUnitHighlighting(new HashSet<Unit>(selectedGroup.units));
     }
 
+    public bool IsPlayable(Leader leader)
+    {
+        return true;
+    }
+
     void SetCharacterSelectionControls()
     {
         ClearInputActions();
+        move.Enable();
+        look.Enable();
+        mousePos.Enable();
+        mouseMove.Enable();
+        secondary.Enable();
+        primary.Enable();
+        cycleUnitGroupLeft.Enable();
+        cycleUnitGroupRight.Enable();
+        playerLeader = null;
+        cursor3D.position = leaders[currentLeaderIndex].transform.position;
+        mainCamera.transform.SetParent(cursor3D);
+        mainCamera.transform.localPosition = cameraOffset;
+        mainCamera.transform.localRotation = Quaternion.LookRotation(-cameraOffset, Vector3.up);
+        foreach (var b in bulidings)
+        {
+            if (b.faction.isNeutral)
+                continue;
+            if (b.faction == playerFaction)
+                continue;
+            captureObjective = b;
+            break;
+        }
+        ClearInputActions();
         cycleUnitGroupLeftButton.SetCallback(ctx => {
-            Debug.Log("Previous leader");
+            currentLeaderIndex--;
+            if (currentLeaderIndex < leaders.Count)
+                currentLeaderIndex += leaders.Count;
+            currentLeaderIndex %= leaders.Count;
+            int count = 0;
+            while (!IsPlayable(leaders[currentLeaderIndex]) && count <= leaders.Count)
+            {
+                currentLeaderIndex--;
+                if (currentLeaderIndex < 0)
+                    currentLeaderIndex += leaders.Count;
+                currentLeaderIndex %= leaders.Count;
+            }
+
         });
 
         cycleUnitGroupRightButton.SetCallback(ctx => {
-            Debug.Log("Next leader");
+            currentLeaderIndex++;
+            currentLeaderIndex %= leaders.Count;
+            if (currentLeaderIndex < 0)
+                currentLeaderIndex += leaders.Count;
+            int count = 0;
+            while (!IsPlayable(leaders[currentLeaderIndex])&&count<=leaders.Count)
+            {
+                currentLeaderIndex++;
+                currentLeaderIndex %= leaders.Count;
+                if (currentLeaderIndex < leaders.Count)
+                    currentLeaderIndex += leaders.Count;
+            }
+        });
+
+        primaryButton.SetCallback(ctx => {
+            if (IsPlayable(leaders[currentLeaderIndex])){ 
+                playerLeader = leaders[currentLeaderIndex];
+                Unit uc;
+                if (playerLeader.TryGetComponent(out uc))
+                    playerFaction = uc.faction;
+                SetPlayControls();
+                state = GameState.PLAYING;
+            }
         });
     }
 
@@ -250,10 +335,8 @@ public class MainGameLogic : MonoBehaviour
         switch (state)
         {
             case GameState.CHARACTER_SELECTION:
-                SetCharacterSelectionControls();
+                CharacterSelectionStateUpdate();
                 break;
-                //CharacterSelectionStateUpdate();
-                //fall through for now
             case GameState.PLAYING:
                 PlayStateUpdate();
                 break;
@@ -265,6 +348,18 @@ public class MainGameLogic : MonoBehaviour
 
     public void CharacterSelectionStateUpdate()
     {
+        if (instance == null || currentLeaderIndex<0 || currentLeaderIndex>=leaders.Count)
+            return;
+        Vector3 diff = leaders[currentLeaderIndex].transform.position - cursor3D.position;
+        cursor3D.position = Vector3.Lerp(cursor3D.position, leaders[currentLeaderIndex].transform.position, 100f*Time.fixedDeltaTime/diff.magnitude);
+        //pan the camera to look at the currently selected leader
+        //show the leaders info in the information panel
+        //clicking the button for the leader should select the leader and start the play state
+
+
+
+
+
         
     }
 
@@ -294,9 +389,7 @@ public class MainGameLogic : MonoBehaviour
         foreach (var leader in leaders)
         {
             Unit uc;
-            if (!leader.TryGetComponent(out uc))
-                continue;
-            if (!uc.faction.isPlayerFaction)
+            if (!leader.TryGetComponent(out uc)||leader!=playerLeader)
                 continue;
             leader.transform.position += 20f * new Vector3(moveVector.x, 0, moveVector.y) * Time.fixedDeltaTime;
 
@@ -434,6 +527,7 @@ public class MainGameLogic : MonoBehaviour
                                     //cycle through the list of leaders and pan the camera between them
                                     //
                                     state = GameState.CHARACTER_SELECTION;
+                                    SetCharacterSelectionControls();
                                 }
                             }
                             else
@@ -472,8 +566,6 @@ public class MainGameLogic : MonoBehaviour
             for (int i = 0; i < numBuildings; ++i)
             {
                 BulidingComponent bc = SpawnBuliding(buildingPrefab, faction.startPosition+UnityEngine.Random.insideUnitCircle * startOffset, faction, unitType);
-                if (!faction.isPlayerFaction && !faction.isNeutral)
-                    captureObjective = bc;
             }
             if (faction.isNeutral)
                 continue;
@@ -486,22 +578,12 @@ public class MainGameLogic : MonoBehaviour
                 if (faction.isPlayerFaction)
                     playerLeader = lc;
             }
-            ISet<Unit> unitsToHighlight = new HashSet<Unit>();
             for(int i=0; i<faction.startUnitCounts[0]; ++i)
             {
                 GameObject unit = SpawnUnit(unitPrefabsByType[unitType], faction.startPosition + UnityEngine.Random.insideUnitCircle * 20f, faction);
                 Unit uc;
                 if(unit.TryGetComponent(out uc))
                     lc.AddUnit(uc);
-                if (faction.isPlayerFaction)
-                    unitsToHighlight.Add(uc);
-            }
-            if (faction.isPlayerFaction)
-            {
-                mainCamera.transform.SetParent(leader.transform);
-                mainCamera.transform.localPosition = cameraOffset;
-                mainCamera.transform.localRotation = Quaternion.LookRotation(-cameraOffset, Vector3.up);
-                ResetUnitHighlighting(unitsToHighlight);
             }
 
         }
