@@ -46,6 +46,8 @@ public class MainGameLogic : MonoBehaviour
     public List<Faction> factions = new List<Faction>();
     public TMPro.TextMeshProUGUI screenCenterText;
     public UnityEngine.UI.Image selectedGroupIcon;
+    public GameObject infoPanelBackground;
+    public TMPro.TextMeshProUGUI infoPanelText;
 
 
     private GameState state = GameState.CHARACTER_SELECTION;
@@ -131,6 +133,16 @@ public class MainGameLogic : MonoBehaviour
         mainCamera.transform.SetParent(playerLeader.transform);
         mainCamera.transform.localPosition = cameraOffset;
         mainCamera.transform.localRotation = Quaternion.LookRotation(-cameraOffset, Vector3.up);
+        infoPanelBackground.SetActive(false);
+        foreach (var b in bulidings)
+        {
+            if (b.faction.isNeutral)
+                continue;
+            if (b.faction == playerFaction)
+                continue;
+            captureObjective = b;
+            break;
+        }
 
         //This highlighting logic should be moved to a method, also it's wrong and should only highlight the selected units
         ISet<Unit> unitsToHighlight = new HashSet<Unit>();
@@ -241,6 +253,8 @@ public class MainGameLogic : MonoBehaviour
         if (playerLeader == null || playerLeader.GetUnitGroups().Count <= 1)
             return;
 
+        
+
         int numGroups = playerLeader.GetUnitGroups().Count;
         if (backwards)
             playerLeader.selectedUserGroup--;
@@ -262,6 +276,7 @@ public class MainGameLogic : MonoBehaviour
 
     void SetCharacterSelectionControls()
     {
+        timeSinceCharSelectStart = 0f;
         ClearInputActions();
         move.Enable();
         look.Enable();
@@ -276,15 +291,7 @@ public class MainGameLogic : MonoBehaviour
         mainCamera.transform.SetParent(cursor3D);
         mainCamera.transform.localPosition = cameraOffset;
         mainCamera.transform.localRotation = Quaternion.LookRotation(-cameraOffset, Vector3.up);
-        foreach (var b in bulidings)
-        {
-            if (b.faction.isNeutral)
-                continue;
-            if (b.faction == playerFaction)
-                continue;
-            captureObjective = b;
-            break;
-        }
+        infoPanelBackground.SetActive(true);
         ClearInputActions();
         cycleUnitGroupLeftButton.SetCallback(ctx => {
             currentLeaderIndex--;
@@ -299,6 +306,8 @@ public class MainGameLogic : MonoBehaviour
                     currentLeaderIndex += leaders.Count;
                 currentLeaderIndex %= leaders.Count;
             }
+            screenCenterText.gameObject.SetActive(false);
+            HighlightCurrentLeader();
 
         });
 
@@ -315,9 +324,12 @@ public class MainGameLogic : MonoBehaviour
                 if (currentLeaderIndex < leaders.Count)
                     currentLeaderIndex += leaders.Count;
             }
+            screenCenterText.gameObject.SetActive(false);
+            HighlightCurrentLeader();
         });
 
         primaryButton.SetCallback(ctx => {
+            screenCenterText.gameObject.SetActive(false);
             if (IsPlayable(leaders[currentLeaderIndex])){ 
                 playerLeader = leaders[currentLeaderIndex];
                 Unit uc;
@@ -327,6 +339,14 @@ public class MainGameLogic : MonoBehaviour
                 state = GameState.PLAYING;
             }
         });
+    }
+
+    void HighlightCurrentLeader()
+    {
+        if (leaders == null || leaders.Count <= currentLeaderIndex)
+            return;
+        Leader leaderTohighlight = leaders[currentLeaderIndex];
+        infoPanelText.text = "A leader is been selected this is where the text description should go";
     }
 
     // Update is called once per frame
@@ -346,10 +366,15 @@ public class MainGameLogic : MonoBehaviour
         }
     }
 
+
+    float timeSinceCharSelectStart = 0f;
     public void CharacterSelectionStateUpdate()
     {
         if (instance == null || currentLeaderIndex<0 || currentLeaderIndex>=leaders.Count)
             return;
+        timeSinceCharSelectStart += Time.fixedDeltaTime;
+        if(timeSinceCharSelectStart>2f)
+            screenCenterText.gameObject.SetActive(false);
         Vector3 diff = leaders[currentLeaderIndex].transform.position - cursor3D.position;
         cursor3D.position = Vector3.Lerp(cursor3D.position, leaders[currentLeaderIndex].transform.position, 100f*Time.fixedDeltaTime/diff.magnitude);
         //pan the camera to look at the currently selected leader

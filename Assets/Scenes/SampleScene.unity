@@ -610,6 +610,8 @@ MonoBehaviour:
     factionColor: {r: 1, g: 0.9880788, b: 0, a: 1}
   screenCenterText: {fileID: 1316303092}
   selectedGroupIcon: {fileID: 621553520}
+  infoPanelBackground: {fileID: 1375863282}
+  infoPanelText: {fileID: 1466118890}
   cursor3D: {fileID: 1548228085}
   move:
     m_Name: Move
@@ -726,7 +728,7 @@ MonoBehaviour:
     - m_Name: 
       m_Id: bad8c45d-056b-4a07-bfce-ec7449d5e49c
       m_Path: <XInputController>/rightShoulder
-      m_Interactions: Tap
+      m_Interactions: 
       m_Processors: 
       m_Groups: 
       m_Action: Primary
@@ -758,7 +760,7 @@ MonoBehaviour:
     - m_Name: 
       m_Id: 27f4c326-ddb0-406f-b30f-03a93b31833b
       m_Path: <XInputController>/leftShoulder
-      m_Interactions: Tap
+      m_Interactions: 
       m_Processors: 
       m_Groups: 
       m_Action: Secondary
@@ -774,7 +776,7 @@ MonoBehaviour:
     - m_Name: 
       m_Id: da2814d5-4ad5-4555-8ce5-4fd6a2ec2415
       m_Path: <Gamepad>/dpad/left
-      m_Interactions: Tap
+      m_Interactions: 
       m_Processors: 
       m_Groups: 
       m_Action: Cycle Unit Group Left
@@ -798,7 +800,7 @@ MonoBehaviour:
     - m_Name: 
       m_Id: 8b9fc47d-8e81-4014-8ba7-4e8e45c33a16
       m_Path: <Gamepad>/dpad/right
-      m_Interactions: Tap
+      m_Interactions: 
       m_Processors: 
       m_Groups: 
       m_Action: Cycle Unit Group Right
@@ -1354,7 +1356,7 @@ MonoBehaviour:
   m_text: This is where we put descriptions of characters and things.
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_sharedMaterial: {fileID: 2100000, guid: 79459efec17a4d00a321bdcc27bbc385, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
