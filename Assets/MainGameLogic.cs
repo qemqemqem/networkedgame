@@ -329,7 +329,13 @@ public class MainGameLogic : MonoBehaviour
         });
 
         primaryButton.SetCallback(ctx => {
-            screenCenterText.gameObject.SetActive(false);
+            if (screenCenterText.gameObject.activeSelf)
+            {
+                screenCenterText.gameObject.SetActive(false);
+                return;
+            }
+
+
             if (IsPlayable(leaders[currentLeaderIndex])){ 
                 playerLeader = leaders[currentLeaderIndex];
                 Unit uc;
